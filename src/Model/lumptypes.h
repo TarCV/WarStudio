@@ -30,21 +30,21 @@ enum class LUMP_TYPE : uint32_t {	//will be available to external modules in the
 	UNKNOWN,
 	MARKER,
 	RAW,
-	TEXT,
+//todo:	TEXT,
 
 	PACKAGE,	//types of the edited package
 
 	DOOMPLAYPAL,
 	DOOMCOLORMAP,
 	DOOMENDOOM,
-//todo:	DOOMDEMO,
-//todo:	DOOMGENMIDI,
-	DOOMDMXGUS,
-//todo:	DOOMMIDI,
-//todo:	DOOMSFX,
-//todo:	DOOMSPEAKERFX,
+	DOOMDEMO,
 	DOOMTEXTURE,
 	DOOMPNAMES,
+	DOOMGENMIDI,
+	DOOMDMXGUS,
+	DOOMSPEAKERFX,
+	DOOMSFX,
+	DOOMMIDI,
 	DOOMPATCH,
 	DOOMFLAT,
 
