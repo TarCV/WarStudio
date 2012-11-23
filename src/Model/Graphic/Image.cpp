@@ -32,7 +32,7 @@ namespace warstudio {
 	namespace model {
 
 Image::Image(size_t width, size_t height, Color bgcolor, const Palette* palette) :
-	image_(Magick::Geometry(width, height), bgcolor.getNativeColor_())
+	image_(Magick::Geometry(width, height), bgcolor.getNativeColor_()), anchor_x_(0), anchor_y_(0), is_anchor_set_(false)
 {
     image_.backgroundColor(bgcolor.getNativeColor_());
 	if (nullptr == palette)
@@ -47,7 +47,7 @@ Image::Image(size_t width, size_t height, Color bgcolor, const Palette* palette)
 }
 
 Image::Image(string file) :
-	image_()
+	image_(), anchor_x_(0), anchor_y_(0), is_anchor_set_(false)
 {
     image_.backgroundColor(Color(0, 0, 0, 0).getNativeColor_());
 	image_.depth(8);
@@ -57,12 +57,15 @@ Image::Image(string file) :
 void Image::open(string file)
 {
 	image_.read(file);
+	//todo: support file format abstraction
+	//todo: support anchor offsets
 }
 
 void Image::save(std::string file) const
 {
 	Magick::Image	copy(image_);
 	//todo: support file format abstraction (e.g. emulate transparency using layers etc.)
+	//todo: support anchor offsets
 	copy.write(file);
 }
 
@@ -108,6 +111,13 @@ void Image::setHeight(size_t newheight)
 size_t Image::getHeight() const
 {
     return image_.size().height();
+}
+
+void Image::setAnchor(size_t x, size_t y)
+{
+	anchor_x_ = x;
+	anchor_y_ = y;
+	is_anchor_set_ = true;
 }
 
 void Image::setPalette(const Palette& newpalette)

@@ -91,6 +91,8 @@ public:
 	void setHeight(size_t newheight);
 	size_t getHeight() const;
 
+	void setAnchor(size_t x, size_t y);
+
 	void setPalette(const Palette&);
 	Palette getPalette() const;
 	bool isPaletted() const;
@@ -113,6 +115,8 @@ private:
 	void doSetPalette(const Palette& newpalette);
 
 	Magick::Image	image_;
+	size_t	anchor_x_, anchor_y_;
+	bool    is_anchor_set_;
 };
 
 /*class ImagePixel
