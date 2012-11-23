@@ -30,50 +30,59 @@
 
 namespace warstudio {
 
-void windowbuf::INITOPERATIONS() {
+//todo: replace INITOPERATIONS and FINISHOPERATIONS with RAII logic
+void iwindowbuf::INITOPERATIONS() {
 	assert(!initedops_);
-	source_oldpos = source_->pubseekoff(0, std::ios_base::cur, std::ios_base::in);
-	if (source_oldpos != windowcursor_) {
+	source_oldpos_ = source_->pubseekoff(0, std::ios_base::cur, std::ios_base::in);
+	assert(source_oldpos_ >= 0);
+	if (source_oldpos_ != windowcursor_) {
 		std::streamoff result = source_->pubseekoff(windowcursor_, std::ios_base::beg, std::ios_base::in);
-		if (result != windowcursor_)	error("windowbuf::initoperations failed");
+		if (result != windowcursor_)	error("iwindowbuf::initoperations failed");
 	}
 	initedops_ = true;
 }
-void windowbuf::FINISHOPERATIONS() {
+void iwindowbuf::FINISHOPERATIONS() {
 	assert(initedops_);
 
 	windowcursor_ = source_->pubseekoff(0, std::ios_base::cur, std::ios_base::in);
 	assert(windowbegin_ <= windowcursor_ && windowcursor_ <= windowend_);
 
-	source_->pubseekoff(source_oldpos, std::ios_base::beg, std::ios_base::in);
+	source_->pubseekoff(source_oldpos_, std::ios_base::beg, std::ios_base::in);
 	initedops_ = false;
 }
 
-windowbuf::windowbuf() : 
-#ifndef NDEBUG
+iwindowbuf::iwindowbuf() : 
 	initedops_(false),
-#endif
 	source_(0), 
 	readpos_base_(0) 
 {}
 
+iwindowbuf::~iwindowbuf()
+{
+	//restore source_ state in case of an exception
+	if (initedops_)
+	{
+		FINISHOPERATIONS();
+	}
+}
 
-void windowbuf::init(std::streambuf& source, int offset, size_t size, size_t buff_size, size_t put_back)
+
+void iwindowbuf::init(std::streambuf& source, int offset, size_t size, size_t buff_size, size_t put_back)
 {
 	assert(!initedops_);	//initops wasn't called yet, should be false
 
-	if (source_)	error("windowbuf is already inited");
+	if (source_)	error("iwindowbuf is already inited");
 	source_ = &source;
 	windowbegin_ = offset;
 	windowend_ = offset+size;
 	windowcursor_ = offset;
-	readpos_base_ = offset;
+	readpos_base_ = 0;
     put_back_ = std::max(put_back, size_t(1));
     buffer_.resize(std::max(buff_size, put_back_) + put_back_);
     char *end = &buffer_.front() + buffer_.size();
     setg(end, end, end);
 }
-size_t windowbuf::updatebuffer(bool onunderflow) 
+size_t iwindowbuf::updatebuffer(bool onunderflow) 
 {
 	assert(initedops_);
 
@@ -88,7 +97,7 @@ size_t windowbuf::updatebuffer(bool onunderflow)
 	size_t toread =  buffer_.size() - (start - base);
 	size_t n;
 	if (windowcursor_ + toread > windowend_)	toread = windowend_ - windowcursor_;
-	readpos_base_ = windowcursor_;
+	readpos_base_ = windowcursor_ - windowbegin_ - (start - base);
 	if (toread) {
 		n = source_->sgetn(start, toread);
 	} else {
@@ -98,7 +107,7 @@ size_t windowbuf::updatebuffer(bool onunderflow)
 	return n;
 }
 
-std::streampos windowbuf::seekoff (std::streamoff off, std::ios_base::seekdir way, std::ios_base::openmode which)  {
+std::streampos iwindowbuf::seekoff (std::streamoff off, std::ios_base::seekdir way, std::ios_base::openmode which)  {
 	assert((which & ~std::ios_base::in) == 0);
 	assert(!initedops_);	//initops wasn't called yet, should be false
 
@@ -107,47 +116,56 @@ std::streampos windowbuf::seekoff (std::streamoff off, std::ios_base::seekdir wa
 	else if (way == std::ios_base::end)
 		off = windowend_ - off - windowbegin_;
 	else if (way == std::ios_base::cur)
-		off += readpos() - windowbegin_;
+		off += readpos();
 	else
 		assert(false);
 
 	return seekpos(off, which);
 }
 
-std::streampos windowbuf::seekpos(std::streampos sp, std::ios_base::openmode which)  {
+std::streampos iwindowbuf::seekpos(std::streampos sp, std::ios_base::openmode which)  {
 	assert(!initedops_);	//initops wasn't called yet, should be false
+	assert((which & ~std::ios_base::in) == 0);
 
-	INITOPERATIONS();
-		assert((which & ~std::ios_base::in) == 0);
+	if (readpos_base_ <= sp && sp <= readpos_base_ + (egptr() - eback()))
+	{
+		//we have already buffered data at the requested position so just move the internal pointer
+		//yes, position exactly after the last buffered character is valid as we don't want to cause buffer update before it is really needed
+		this->setg(eback(), eback() + sp - readpos_base_, egptr());
+	}
+	else
+	{
+		INITOPERATIONS();
 
-		std::streamoff oldpos = source_->pubseekoff(0, std::ios_base::cur, std::ios_base::in);
-		std::streamoff result = source_->pubseekpos(windowbegin_ + sp, std::ios_base::in);
-		if (-1 == result || result < windowbegin_ || result > windowend_) {
-			source_->pubseekoff(oldpos, std::ios_base::cur, std::ios_base::in);
-			return -1;
-		}
+			std::streamoff result = source_->pubseekpos(windowbegin_ + sp, std::ios_base::in);
+			if (-1 == result || result < windowbegin_ || result > windowend_) // > (not >=) because position exactly after the last character is valid, this allows checking length of a stream
+			{
+				FINISHOPERATIONS();
+				return -1;
+			}
 
-		if (oldpos != result)
-		{
-			windowcursor_ = source_->pubseekoff(0, std::ios_base::cur, std::ios_base::in);
+			windowcursor_ = result;
+			assert(source_->pubseekoff(0, std::ios_base::cur, std::ios_base::in) == result);
 			assert(windowbegin_ <= windowcursor_ && windowcursor_ <= windowend_);
 			updatebuffer();
-		}
-	FINISHOPERATIONS();
+	
+		FINISHOPERATIONS();
+	}
 
-	return result - windowbegin_;
+	assert(readpos() == sp);	//by now, after all error checks, position visible outside must be equal to the requested position
+	return readpos();
 }
-std::streambuf::int_type windowbuf::underflow() {
+std::streambuf::int_type iwindowbuf::underflow() {
 	assert(!initedops_);	//initops wasn't called yet, should be false
 
-    if (gptr() < egptr())
-        return traits_type::to_int_type(*gptr());
+	if (gptr() >= egptr())
+	{
+		INITOPERATIONS();
+			size_t n = updatebuffer(true);
+		FINISHOPERATIONS();
 
-	INITOPERATIONS();
-		size_t n = updatebuffer(true);
-	FINISHOPERATIONS();
-
-	if (n == 0)	return traits_type::eof();
+		if (n == 0)	return traits_type::eof();
+	}
     return traits_type::to_int_type(*gptr());
 }
 

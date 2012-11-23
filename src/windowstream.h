@@ -30,27 +30,27 @@
 
 namespace warstudio {
 
-class windowbuf : public std::streambuf {
+// These classes implement std interface, so for now I try to be close to std naming conventions here
+
+class iwindowbuf : public std::streambuf {
 private:
 	std::streambuf*	source_;
-	std::streamoff	source_oldpos;
+	std::streamoff	source_oldpos_;
 
 	int windowbegin_;
 	int windowend_;
 	int windowcursor_;	//streampos in the source_ (NOT suitable for stream.tellg)
 
-	int readpos_base_;	//base for streampos visible outside (e.g. for stream.tellg)
+	int readpos_base_;	//(windowbegin_ + readpos_base_) is the position of currently buffered data in the source
 	std::size_t put_back_;
 
     std::vector<char> buffer_;
 
-#ifndef NDEBUG
 	bool initedops_;
-#endif
 
 private:
 	size_t updatebuffer(bool onunderflow = false);
-	int readpos() {return readpos_base_ + (gptr() - eback());}	//returns streampos windowbegin_ ADDED
+	int readpos() {return readpos_base_ + (gptr() - eback());}	//identical to stream.tellg, returns streampos withOUT windowbegin_ being added
 protected:
     int_type underflow() override;
 	std::streampos seekoff (std::streamoff off, std::ios_base::seekdir way, std::ios_base::openmode which) override;
@@ -59,15 +59,17 @@ protected:
 	void INITOPERATIONS();
 	void FINISHOPERATIONS();
 public:
-	windowbuf();
+	iwindowbuf();
+	~iwindowbuf();
 	void init(std::streambuf& source, int offset, size_t size, std::size_t buff_size = WINDOWSTREAM_BUFFER_SIZE, std::size_t put_back = 8);
 };
 
 class iwindowstream : public std::istream {
 private:
-	windowbuf buffer;
+	iwindowbuf buffer;
 public:
 	iwindowstream(std::streambuf& source, int offset, size_t size);
 };
+
 
 }
