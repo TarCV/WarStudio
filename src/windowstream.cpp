@@ -30,18 +30,30 @@
 
 namespace warstudio {
 
-//todo: replace INITOPERATIONS and FINISHOPERATIONS with RAII logic
-void iwindowbuf::INITOPERATIONS() {
+iwindowbuf_sentry::iwindowbuf_sentry(iwindowbuf& buf)
+	: buf_(buf)
+{
+	buf_.begin_operations();
+}
+
+iwindowbuf_sentry::~iwindowbuf_sentry()
+{
+	buf_.finish_operations();
+}
+
+void iwindowbuf::begin_operations() {
 	assert(!initedops_);
+
 	source_oldpos_ = source_->pubseekoff(0, std::ios_base::cur, std::ios_base::in);
 	assert(source_oldpos_ >= 0);
+
 	if (source_oldpos_ != windowcursor_) {
 		std::streamoff result = source_->pubseekoff(windowcursor_, std::ios_base::beg, std::ios_base::in);
 		if (result != windowcursor_)	error("iwindowbuf::initoperations failed");
 	}
 	initedops_ = true;
 }
-void iwindowbuf::FINISHOPERATIONS() {
+void iwindowbuf::finish_operations() {
 	assert(initedops_);
 
 	windowcursor_ = source_->pubseekoff(0, std::ios_base::cur, std::ios_base::in);
@@ -57,14 +69,6 @@ iwindowbuf::iwindowbuf() :
 	readpos_base_(0) 
 {}
 
-iwindowbuf::~iwindowbuf()
-{
-	//restore source_ state in case of an exception
-	if (initedops_)
-	{
-		FINISHOPERATIONS();
-	}
-}
 
 
 void iwindowbuf::init(std::streambuf& source, int offset, size_t size, size_t buff_size, size_t put_back)
@@ -135,21 +139,17 @@ std::streampos iwindowbuf::seekpos(std::streampos sp, std::ios_base::openmode wh
 	}
 	else
 	{
-		INITOPERATIONS();
+		iwindowbuf_sentry sentry(*this);
 
-			std::streamoff result = source_->pubseekpos(windowbegin_ + sp, std::ios_base::in);
-			if (-1 == result || result < windowbegin_ || result > windowend_) // > (not >=) because position exactly after the last character is valid, this allows checking length of a stream
-			{
-				FINISHOPERATIONS();
-				return -1;
-			}
+		std::streamoff result = source_->pubseekpos(windowbegin_ + sp, std::ios_base::in);
+		if (-1 == result || result < windowbegin_ || result > windowend_) // > (not >=) because position exactly after the last character is valid, this allows checking length of a stream
+		{
+			return -1;
+		}
 
-			windowcursor_ = result;
-			assert(source_->pubseekoff(0, std::ios_base::cur, std::ios_base::in) == result);
-			assert(windowbegin_ <= windowcursor_ && windowcursor_ <= windowend_);
-			updatebuffer();
-	
-		FINISHOPERATIONS();
+		windowcursor_ = result;
+		assert(windowbegin_ <= windowcursor_ && windowcursor_ <= windowend_);
+		updatebuffer();
 	}
 
 	assert(readpos() == sp);	//by now, after all error checks, position visible outside must be equal to the requested position
@@ -160,10 +160,9 @@ std::streambuf::int_type iwindowbuf::underflow() {
 
 	if (gptr() >= egptr())
 	{
-		INITOPERATIONS();
-			size_t n = updatebuffer(true);
-		FINISHOPERATIONS();
-
+		iwindowbuf_sentry sentry(*this);
+		
+		size_t n = updatebuffer(true);
 		if (n == 0)	return traits_type::eof();
 	}
     return traits_type::to_int_type(*gptr());

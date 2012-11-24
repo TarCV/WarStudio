@@ -32,7 +32,26 @@ namespace warstudio {
 
 // These classes implement std interface, so for now I try to be close to std naming conventions here
 
-class iwindowbuf : public std::streambuf {
+class iwindowbuf : public std::streambuf
+{
+public:
+	iwindowbuf();
+	void init(std::streambuf& source, int offset, size_t size, std::size_t buff_size = WINDOWSTREAM_BUFFER_SIZE, std::size_t put_back = 8);
+
+protected:
+    int_type underflow() override;
+	std::streampos seekoff (std::streamoff off, std::ios_base::seekdir way, std::ios_base::openmode which) override;
+	std::streampos seekpos(std::streampos sp, std::ios_base::openmode which) override;
+
+private:
+	friend class iwindowbuf_sentry;
+
+	size_t updatebuffer(bool onunderflow = false);
+	int readpos() {return readpos_base_ + (gptr() - eback());}	//identical to stream.tellg, returns streampos withOUT windowbegin_ being added
+
+	void begin_operations();
+	void finish_operations();
+
 private:
 	std::streambuf*	source_;
 	std::streamoff	source_oldpos_;
@@ -47,21 +66,16 @@ private:
     std::vector<char> buffer_;
 
 	bool initedops_;
+};
+
+class iwindowbuf_sentry
+{
+public:
+	iwindowbuf_sentry(iwindowbuf& buf);
+	~iwindowbuf_sentry();
 
 private:
-	size_t updatebuffer(bool onunderflow = false);
-	int readpos() {return readpos_base_ + (gptr() - eback());}	//identical to stream.tellg, returns streampos withOUT windowbegin_ being added
-protected:
-    int_type underflow() override;
-	std::streampos seekoff (std::streamoff off, std::ios_base::seekdir way, std::ios_base::openmode which) override;
-	std::streampos seekpos(std::streampos sp, std::ios_base::openmode which) override;
-
-	void INITOPERATIONS();
-	void FINISHOPERATIONS();
-public:
-	iwindowbuf();
-	~iwindowbuf();
-	void init(std::streambuf& source, int offset, size_t size, std::size_t buff_size = WINDOWSTREAM_BUFFER_SIZE, std::size_t put_back = 8);
+	iwindowbuf& buf_;
 };
 
 class iwindowstream : public std::istream {
