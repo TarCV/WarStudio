@@ -23,23 +23,28 @@
 
 #include <Magick++.h>
 
+#include <stdint.h>
+
 namespace warstudio {
 	namespace model {
 
 class Color
 {
 public:
-	Color() : color_(0, 0, 0, 0xff) {}
-    Color(unsigned char r, unsigned char g, unsigned char b, unsigned char a = 0xff) : color_(ConvertByteToQuantum(r), ConvertByteToQuantum(g), ConvertByteToQuantum(b), ConvertByteToQuantum(a)) {}
+	Color() : color_(ConvertByteToQuantum(0), ConvertByteToQuantum(0), ConvertByteToQuantum(0), ConvertByteToQuantum(0xff)) {}
+    Color(uint8_t r, uint8_t g, uint8_t b, uint8_t a = 0xff) : color_(ConvertByteToQuantum(r), ConvertByteToQuantum(g), ConvertByteToQuantum(b), ConvertByteToQuantum(a)) {}
 
-	void setR(unsigned char r) {color_.redQuantum(ConvertByteToQuantum(r));}
-	unsigned char getR() const {return ConvertQuantumToByte(color_.redQuantum());}
-	void setG(unsigned char g) {color_.greenQuantum(ConvertByteToQuantum(g));}
-	unsigned char getG() const {return ConvertQuantumToByte(color_.greenQuantum());}
-	void setB(unsigned char b) {color_.blueQuantum(ConvertByteToQuantum(b));}
-	unsigned char getB() const {return ConvertQuantumToByte(color_.blueQuantum());}
-	void setA(unsigned char a) {color_.alphaQuantum(ConvertByteToQuantum(a));}
-	unsigned char getA() const {return ConvertQuantumToByte(color_.alphaQuantum());}
+	void setR(uint8_t r) {color_.redQuantum(ConvertByteToQuantum(r));}
+	uint8_t getR() const {return ConvertQuantumToByte(color_.redQuantum());}
+	void setG(uint8_t g) {color_.greenQuantum(ConvertByteToQuantum(g));}
+	uint8_t getG() const {return ConvertQuantumToByte(color_.greenQuantum());}
+	void setB(uint8_t b) {color_.blueQuantum(ConvertByteToQuantum(b));}
+	uint8_t getB() const {return ConvertQuantumToByte(color_.blueQuantum());}
+	void setA(uint8_t a) {color_.alphaQuantum(ConvertByteToQuantum(a));}
+	uint8_t getA() const {return ConvertQuantumToByte(color_.alphaQuantum());}
+
+	bool operator==(const Color &r) const  {return (getNativeColor_() == r.getNativeColor_() && getA() == r.getA());}
+	bool operator!=(const Color &r) const  {return !operator!=(r);}
 
 private:
 	friend class Image;
@@ -49,10 +54,10 @@ private:
 private:
 	Magick::Color			color_;
 
-	static const int		quantum_shift_ = QuantumDepth - 8;
-	static const int		quantum_fix_ = (QuantumDepth > 8) ? (1 << (QuantumDepth - 9)) : 0;
-	static unsigned char ConvertQuantumToByte(MagickLib::Quantum q) {return (q >> quantum_shift_);}
-	static MagickLib::Quantum ConvertByteToQuantum(unsigned char b) {return ((b << quantum_shift_) + quantum_fix_);}
+	static const int                quantum_shift_ = QuantumDepth - 8;
+	static const MagickLib::Quantum quantum_fix_ = (QuantumDepth > 8) ? (1 << (QuantumDepth - 9)) : 0;
+	static uint8_t ConvertQuantumToByte(MagickLib::Quantum q) {return (q >> quantum_shift_);}
+	static MagickLib::Quantum ConvertByteToQuantum(uint8_t b) {return (b << quantum_shift_) + quantum_fix_;}
 };
 
 	}
