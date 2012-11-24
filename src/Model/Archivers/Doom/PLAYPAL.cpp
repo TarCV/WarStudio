@@ -52,9 +52,7 @@ const BaseContainer *PlaypalArchiver::doExtract(const InputLumpData& in) const
 		{
 			unsigned char pixel[3];
 			readFromStream<unsigned char, 3>(in.stream, pixel);
-			c.setR(pixel[0]);
-			c.setG(pixel[1]);
-			c.setB(pixel[2]);
+			c = Color(pixel[0], pixel[1], pixel[2]);
 		}
 	}
 	return out.release();
