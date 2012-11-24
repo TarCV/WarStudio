@@ -41,25 +41,36 @@ const BaseContainer *PatchArchiver::doExtract(const InputLumpData& in) const
 	size_t height = readFromStream<uint16_t>(in.stream);
 	int offset_x = readFromStream<int16_t>(in.stream);
 	int offset_y = readFromStream<int16_t>(in.stream);
+
+	vector<uint32_t> column_pointers(width);
+
 	int columns_begin_p = in.stream.tellg();
-	for (size_t x(0); x < width; ++x) {
-		uint32_t pointer = readFromStream<uint32_t>(in.stream);
+
+	{
+		auto it(column_pointers.begin());
+		size_t x(0);
+		for (; x < width; ++x, ++it) {
+			*it = readFromStream<uint32_t>(in.stream);
+		}
+		assert(it == column_pointers.end());
+	}
+
+	for (const auto column_pointer : column_pointers)
+	{
 		size_t last_post_start(0);
 		bool tall_patch_mode(false);
 		size_t post_start(0xff);
 
-		int next_column_p = in.stream.tellg();
-		in.stream.seekg(pointer);
-
-		int debug = in.stream.tellg();
-		assert(pointer == debug);
+		if (static_cast<uint32_t>(in.stream.tellg()) != column_pointer)
+		{
+			in.stream.seekg(column_pointer);
+		}
 
 		while ((post_start = readFromStream<uint8_t>(in.stream)) != 0xff)
 		{
 			if (tall_patch_mode || post_start < last_post_start)
 			{
 				if (!tall_patch_mode)	warning("The patch is corrupted or is a tall patch. Assuming it is a tall patch.");
-				assert(false);	//this shouldn't happen on Ultimate Doom IWAD
 				post_start += last_post_start;
 				tall_patch_mode = true;
 			}
@@ -69,12 +80,10 @@ const BaseContainer *PatchArchiver::doExtract(const InputLumpData& in) const
 			if (post_start + post_height > height)
 			{
 				warning("Actual height of the patch is greater than the one stated in the patch header.");
-				assert(false);	//this shouldn't happen on Ultimate Doom IWAD
 				height = post_start + post_height;
 			}
 			in.stream.seekg(post_height + 2, SEEK_CUR);
 		}
-		in.stream.seekg(next_column_p);
 	}
 
 	auto ret = unique_ptr<ImageContainer>(new ImageContainer(width, height, Color(0, 0, 0, 0), &in.palettes.at("PLAYPAL")));
@@ -86,36 +95,41 @@ const BaseContainer *PatchArchiver::doExtract(const InputLumpData& in) const
     auto& pixels = window.pixels();
 	assert(pixels.size() == width*height);
 
-	in.stream.seekg(columns_begin_p);
-	for (size_t x(0); x < width; ++x) {
-		auto pointer = readFromStream<uint32_t>(in.stream);
-		auto next_pos = in.stream.tellg();
-		uint8_t last_post_start(0);
-		bool tall_patch_mode(false);
-		uint8_t post_start(0xff);
-		in.stream.seekg(pointer);
-		while ((post_start = readFromStream<uint8_t>(in.stream)) != 0xff)
-		{
-			if (tall_patch_mode || post_start < last_post_start)
+	{
+		auto it(column_pointers.cbegin());
+		size_t x(0);
+		for (; x < width; ++x, ++it) {
+			if (static_cast<uint32_t>(in.stream.tellg()) != *it)
 			{
-				post_start += last_post_start;
-				tall_patch_mode = true;
-			}
-			last_post_start = post_start;
-			auto post_height = readFromStream<uint8_t>(in.stream);
-
-			readFromStream<uint8_t>(in.stream);	//extract unused byte
-
-			uint8_t i(0);
-			size_t vector_index(x + post_start*width);
-			for (; i < post_height; ++i, vector_index += width)
-			{
-				pixels[vector_index] = readFromStream<uint8_t>(in.stream);
+				in.stream.seekg(*it);
 			}
 
-			readFromStream<uint8_t>(in.stream);	//extract unused byte
+			uint8_t last_post_start(0);
+			bool tall_patch_mode(false);
+			uint8_t post_start(0xff);
+			while ((post_start = readFromStream<uint8_t>(in.stream)) != 0xff)
+			{
+				if (tall_patch_mode || post_start < last_post_start)
+				{
+					post_start += last_post_start;
+					tall_patch_mode = true;
+				}
+				last_post_start = post_start;
+				auto post_height = readFromStream<uint8_t>(in.stream);
+
+				readFromStream<uint8_t>(in.stream);	//extract unused byte
+
+				uint8_t i(0);
+				size_t vector_index(x + post_start*width);
+				for (; i < post_height; ++i, vector_index += width)
+				{
+					pixels[vector_index] = readFromStream<uint8_t>(in.stream);
+				}
+
+				readFromStream<uint8_t>(in.stream);	//extract unused byte
+			}
 		}
-		in.stream.seekg(next_pos);
+		assert(it == column_pointers.cend());
 	}
 
 	return ret.release();
