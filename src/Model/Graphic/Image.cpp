@@ -131,7 +131,8 @@ void Image::doSetPalette(const Palette& newpalette)
 {
 	image_.classType(MagickLib::ClassType::PseudoClass);
 	
-	if (getBackgroundColor().getA() != 0xff)
+	const Color bgcolor = getBackgroundColor();
+	if (bgcolor.getA() != 0xff)
 	{
 		image_.type(MagickLib::ImageType::PaletteMatteType);
 	}
@@ -140,7 +141,26 @@ void Image::doSetPalette(const Palette& newpalette)
 		image_.type(MagickLib::ImageType::PaletteType);
 	}
 
-	image_.colorMapSize(newpalette.size());
+	bool found_bgcolor(false);
+	for (const auto &color : newpalette)
+	{
+		if (bgcolor == color)
+		{
+			found_bgcolor = true;
+			break;
+		}
+	}
+
+/*	if (!found_bgcolor)
+	{
+		image_.colorMapSize(newpalette.size() + 1);
+		image_.colorMap(newpalette.size(), bgcolor.getNativeColor_());
+	}
+	else*/
+	{
+		image_.colorMapSize(newpalette.size());
+	}
+
 	size_t i(0);
 	auto it = newpalette.cbegin();
 	for (; it != newpalette.cend(); ++it, ++i)
@@ -148,6 +168,7 @@ void Image::doSetPalette(const Palette& newpalette)
 		image_.colorMap(i, it->getNativeColor_());
 	}
 	assert(it - newpalette.cbegin() == i);
+
 }
 
 Palette Image::getPalette() const
@@ -279,7 +300,7 @@ void Image::setWindow(const Window& buffer)
 	MagickLib::PixelPacket *colors = image_.getPixels(window.offset_X, window.offset_Y, window.width, window.height);
 
 	auto buffer_it = buffer.buffer_->begin();
-	auto colors_it = &colors[0];
+	auto colors_it = colors;
 	for(; buffer_it != buffer.buffer_->end(); ++buffer_it, ++colors_it)
 	{
 		*colors_it = buffer_it->getNativeColor_();
