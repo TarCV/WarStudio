@@ -124,7 +124,7 @@ void DefaultConverters::registerPath(LUMP_TYPE type, BUILTIN_ARCHIVER archiver, 
 	const ArchiverId	archiver_id(SPACE_WARSTUDIO, archiver);
 	assert(global.archivers.isKnown(archiver_id));
 
-#ifndef  NDEBUG
+#ifndef NDEBUG
 	for (const auto converter_id : converters)
 	{
 		assert(global.converters.isKnown(converter_id));
@@ -173,7 +173,18 @@ string DefaultConverters::extractWrite(const BaseNode& node, const string& outfi
 	LUMP_TYPE type = node.type();
 
 	if (convertpaths.count(type) == 0)	//todo: remove when everything is implemented
+	{
 		type = LUMP_TYPE::RAW;
+	}
+
+#ifndef NDEBUG
+	if (node.getName() != "END2")
+	{
+		warning("DEBUG: skipped");
+		return "";
+	}
+#endif
+
 	const ConvertPath path = convertpaths.at(type);
 
 	if (!global.archivers.isKnown(path.archiver))	error("Archiver is not registered");
