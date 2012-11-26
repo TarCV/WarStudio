@@ -26,6 +26,7 @@
 
 #include <string>
 #include <vector>
+#include <map>
 #include <memory>
 
 #include <Magick++.h>
@@ -74,6 +75,7 @@ public:
 
 	Image(size_t width, size_t height, Color bgcolor = Color(0, 0, 0, 0), const Palette* palette = nullptr);
 	Image(std::string file);
+	Image(const Image& image);
 	void open(std::string file);
 	void save(std::string file) const;
 /*	ImagePixel getPixel(size_t x, size_t y);
@@ -93,8 +95,9 @@ public:
 
 	void setAnchor(size_t x, size_t y);
 
-	void setPalette(const Palette&);
-	Palette getPalette() const;
+//	void setPalette(const Palette&);
+	enum class PALETTE_TYPE {WITHOUT_EXTRA_BGCOLOR, WITH_EXTRA_BGCOLOR};
+	Palette getPalette(PALETTE_TYPE include_background = PALETTE_TYPE::WITHOUT_EXTRA_BGCOLOR) const;
 	bool isPaletted() const;
 
     void resize(size_t newwidth, size_t newheight);
@@ -111,12 +114,34 @@ private:
 	IndexWindow::Pixels* createIndexBufferFromRect(const Rect& window) const;
 	Window::Pixels* createBufferFromRect(const Rect& window) const;
 
+
 private:
 	void doSetPalette(const Palette& newpalette);
 
-	Magick::Image	image_;
+	static void initFormatData();
+
+	enum class TRANSPARENCY_TYPE {NONE, HAS_TRANSPARENCY, HAS_ALPHA};
+	static TRANSPARENCY_TYPE checkTransparency(Image& copy);
+
+	static void emulateTransparency(Image& copy, Image& mask, bool remove_last_color);
+
+	struct FormatInfo
+	{
+		size_t	palette_max;
+		TRANSPARENCY_TYPE transparency_support;
+
+		FormatInfo(size_t palette_max_, TRANSPARENCY_TYPE transparency_support_) : palette_max(palette_max_), transparency_support(transparency_support_) {}
+	};
+	typedef std::map<std::string, FormatInfo> FormatMap;
+	static FormatMap format_info_;
+
+	Magick::Image image_;
+
+	bool    is_bgcolor_appended_;	//true if bgcolor was automatically appended to the palette
+
 	size_t	anchor_x_, anchor_y_;
 	bool    is_anchor_set_;
+
 };
 
 /*class ImagePixel

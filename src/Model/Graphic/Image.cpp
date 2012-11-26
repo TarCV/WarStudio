@@ -24,15 +24,34 @@
 
 #include "Image.h"
 
+#include "../../utility.h"
+
 #include <assert.h>
+#include <filesystem>
+#include <boost/algorithm/string/case_conv.hpp>
 
 using namespace std;
+using namespace std::tr2;
 
 namespace warstudio {
 	namespace model {
 
+Image::FormatMap Image::format_info_;
+
+void Image::initFormatData()
+{
+	if (format_info_.size() > 0)	return;
+
+	format_info_.insert(make_pair(".bmp", FormatInfo(256, TRANSPARENCY_TYPE::NONE)));
+	format_info_.insert(make_pair(".png", FormatInfo(256, TRANSPARENCY_TYPE::HAS_ALPHA)));
+}
+
 Image::Image(size_t width, size_t height, Color bgcolor, const Palette* palette) :
-	image_(Magick::Geometry(width, height), bgcolor.getNativeColor_()), anchor_x_(0), anchor_y_(0), is_anchor_set_(false)
+	image_(Magick::Geometry(width, height),bgcolor.getNativeColor_()),
+	anchor_x_(0),
+	anchor_y_(0),
+	is_anchor_set_(false),
+	is_bgcolor_appended_(false)
 {
     image_.backgroundColor(bgcolor.getNativeColor_());
 	if (nullptr == palette)
@@ -47,11 +66,22 @@ Image::Image(size_t width, size_t height, Color bgcolor, const Palette* palette)
 }
 
 Image::Image(string file) :
-	image_(), anchor_x_(0), anchor_y_(0), is_anchor_set_(false)
+	image_(),
+	anchor_x_(0),
+	anchor_y_(0),
+	is_anchor_set_(false),
+	is_bgcolor_appended_(false)
 {
-    image_.backgroundColor(Color(0, 0, 0, 0).getNativeColor_());
-	image_.depth(8);
 	open(file);
+}
+
+Image::Image(const Image& image) :
+	image_(image.image_),
+	anchor_x_(image.anchor_x_),
+	anchor_y_(image.anchor_y_),
+	is_anchor_set_(image.is_anchor_set_),
+	is_bgcolor_appended_(image.is_bgcolor_appended_)
+{
 }
 
 void Image::open(string file)
@@ -61,16 +91,152 @@ void Image::open(string file)
 	//todo: support anchor offsets
 }
 
+Image::TRANSPARENCY_TYPE Image::checkTransparency(Image& copy)
+{
+	TRANSPARENCY_TYPE ret(TRANSPARENCY_TYPE::NONE);
+
+
+	if (copy.isPaletted())
+	{
+		for (size_t i = 0; i < copy.image_.colorMapSize(); ++i)
+		{
+			if (Color(copy.image_.colorMap(i)).getA() < 0xff)
+			{
+				ret = TRANSPARENCY_TYPE::HAS_TRANSPARENCY;
+				if (Color(copy.image_.colorMap(i)).getA() > 0)
+				{
+					return TRANSPARENCY_TYPE::HAS_ALPHA;
+				}
+			}
+		}
+	}
+	else
+	{
+		const auto window = copy.getWindow(Rect(0, 0, copy.getWidth(), copy.getHeight()));
+		for (const auto &pixel : window.pixels())
+		{
+			if (pixel.getA() < 0xff)
+			{
+				ret = TRANSPARENCY_TYPE::HAS_TRANSPARENCY;
+				if (pixel.getA() > 0)
+				{
+					return TRANSPARENCY_TYPE::HAS_ALPHA;
+				}
+			}
+		}
+	}
+
+	return ret;
+}
+
+void Image::emulateTransparency(Image& copy, Image& mask, bool remove_last_color)
+{
+	assert(mask.getWidth() == copy.getWidth());
+	assert(mask.getHeight() == copy.getHeight());
+	assert(mask.getBackgroundColor() == Color(0, 0, 0, 0xff));
+//	mask.image_.type(MagickLib::ImageType::GrayscaleType);
+
+	auto mask_window = mask.getWindow(Rect(0, 0, copy.getWidth(), copy.getHeight()));
+	auto &mask_pixels = mask_window.pixels();
+	auto mask_it(mask_pixels.begin());
+
+	if (copy.isPaletted())
+	{
+		auto palette = copy.getPalette(PALETTE_TYPE::WITH_EXTRA_BGCOLOR);
+		auto window = copy.getIndexWindow(Rect(0, 0, copy.getWidth(), copy.getHeight()));
+		auto &window_pixels = window.pixels();
+		auto copy_it(window_pixels.begin());
+		for (; mask_it != mask_pixels.end(); ++mask_it, ++copy_it)
+		{
+			*mask_it = Color(palette[*copy_it].getA(), palette[*copy_it].getA(), palette[*copy_it].getA(), 0xff);
+
+			if (palette[*copy_it].getA() == 0)
+			{
+				warning("");
+			}
+
+			if (remove_last_color && *copy_it == palette.size() - 1)
+			{
+				*copy_it = 0;	//todo: use color nearest to black
+			}
+		}
+		assert(copy_it == window_pixels.end());
+
+		for (auto& color : palette)
+		{
+			color.setA(0xff);
+		}
+
+		if (remove_last_color)
+		{
+			copy.setBackgroundColor(palette.front());	//todo: use color nearest to black
+			palette.erase(--palette.cend());
+		}
+
+		copy.doSetPalette(palette);
+	}
+	else
+	{
+		auto window = copy.getWindow(Rect(0, 0, copy.getWidth(), copy.getHeight()));
+		auto &window_pixels = window.pixels();
+		auto copy_it(window_pixels.begin());
+		for (; mask_it != mask_pixels.end(); ++mask_it, ++copy_it)
+		{
+			*mask_it = Color(copy_it->getA(), copy_it->getA(), copy_it->getA(), 0xff);
+			copy_it->setA(0xff);
+		}
+		assert(copy_it == window_pixels.end());
+	}
+}
+
 void Image::save(std::string file) const
 {
-	Magick::Image	copy(image_);
+	Image	copy(*this);
 	//todo: support file format abstraction (e.g. emulate transparency using layers etc.)
 	//todo: support anchor offsets
-	copy.write(file);
+	
+	initFormatData();
+	const sys::path path(file);
+	const string extension = boost::to_lower_copy(path.extension());
+	if (format_info_.count(extension) == 0)
+	{
+		error("Writing in the image format is not supported");
+	}
+	FormatInfo	&format = format_info_.at(extension);
+
+	bool remove_last_color(false);
+	if (isPaletted() && copy.image_.colorMapSize() > format.palette_max)
+	{
+		assert(copy.is_bgcolor_appended_ && copy.image_.colorMapSize() == format.palette_max + 1);
+		assert(copy.getBackgroundColor().getA() == 0);
+		remove_last_color = true;
+	}
+
+	if (remove_last_color || format.transparency_support != TRANSPARENCY_TYPE::HAS_ALPHA)
+	{
+		const TRANSPARENCY_TYPE transparency_needed(checkTransparency(copy));
+
+		if (remove_last_color || static_cast<int>(transparency_needed) > static_cast<int>(format.transparency_support))
+		{
+			Image mask(copy.getWidth(), copy.getHeight(), Color(0, 0, 0, 0xff));
+
+			emulateTransparency(copy, mask, remove_last_color);
+
+			sys::path mask_path(path.branch_path());
+			mask_path /= path.basename() + "__mask" + extension;
+			mask.image_.write(mask_path.file_string());
+		}
+	}
+
+	copy.image_.write(file);
 }
 
 void Image::setBackgroundColor(Color newcolor)
 {
+	if (is_bgcolor_appended_)
+	{
+		image_.colorMap(image_.colorMapSize() - 1, newcolor.getNativeColor_());
+	}
 	image_.backgroundColor(newcolor.getNativeColor_());
 }
 
@@ -120,13 +286,13 @@ void Image::setAnchor(size_t x, size_t y)
 	is_anchor_set_ = true;
 }
 
-void Image::setPalette(const Palette& newpalette)
+/*void Image::setPalette(const Palette& newpalette)
 {
-	//todo: use remap for converting to this palette
+	//todo: removed until I implement converting to this palette
 	image_.quantizeColors(newpalette.size());
 	image_.quantize();
 	doSetPalette(newpalette);
-}
+}*/
 void Image::doSetPalette(const Palette& newpalette)
 {
 	image_.classType(MagickLib::ClassType::PseudoClass);
@@ -151,12 +317,13 @@ void Image::doSetPalette(const Palette& newpalette)
 		}
 	}
 
-/*	if (!found_bgcolor)
+	if (!found_bgcolor)
 	{
 		image_.colorMapSize(newpalette.size() + 1);
 		image_.colorMap(newpalette.size(), bgcolor.getNativeColor_());
+		is_bgcolor_appended_ = true;
 	}
-	else*/
+	else
 	{
 		image_.colorMapSize(newpalette.size());
 	}
@@ -171,10 +338,10 @@ void Image::doSetPalette(const Palette& newpalette)
 
 }
 
-Palette Image::getPalette() const
+Palette Image::getPalette(PALETTE_TYPE include_background) const
 {
 	Magick::Image	copy(image_);
-	Palette ret(copy.colorMapSize());
+	Palette ret(is_bgcolor_appended_ && include_background == PALETTE_TYPE::WITHOUT_EXTRA_BGCOLOR ? copy.colorMapSize() - 1 : copy.colorMapSize());
 	size_t i(0);
 	auto it = ret.begin();
 	for (; it != ret.end(); ++it, ++i)
@@ -235,7 +402,7 @@ Image::IndexWindow::Pixels* Image::createIndexBufferFromRect(const Rect& window)
 }
 Image::Window::Pixels* Image::createBufferFromRect(const Rect& window) const
 {
-	assert(!isPaletted());
+//	assert(!isPaletted());
 
 	unique_ptr<Window::Pixels> buffer(new Window::Pixels(window.width * window.height));
 
