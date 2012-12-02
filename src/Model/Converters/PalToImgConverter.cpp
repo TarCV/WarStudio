@@ -60,7 +60,7 @@ const BaseContainer* PalToImgConverter::doExtract(const BaseContainer& in) const
 const BaseContainer* PalToImgConverter::doArchive(const BaseContainer& in, const Context& context) const
 {
 	const Image& image = dynamic_cast<const ImageContainer &>(in).image;
-	Image::Window window(image.getWindow(Rect(0, 0, image.getWidth(), image.getHeight())));	//window is to be destructed exactly in the end of scope, so I use an explicit var
+	Image::ConstWindow window(image.getConstWindow(Rect(0, 0, image.getWidth(), image.getHeight())));
 
     auto ret = unique_ptr<PaletteContainer>(new PaletteContainer(image.getHeight()));
     PaletteSet &palset = ret->palset;

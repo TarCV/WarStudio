@@ -103,7 +103,7 @@ void FlatArchiver::doArchive(const BaseContainer& in, const Context& context, Ou
 		if (image.getHeight() != 65 && image.getHeight() != 128)	warning("Flat height is nor 65 nor 128");
 	}
 
-	Image::IndexWindow window(image.getIndexWindow(Rect(0, 0, image.getWidth(), image.getHeight())));	//window is to be destructed exactly in the end of scope, so I use an explicit var
+	Image::ConstIndexWindow window(image.getConstIndexWindow(Rect(0, 0, image.getWidth(), image.getHeight())));
     
 	assert(false);
 	//implement pallete change check

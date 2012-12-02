@@ -140,7 +140,7 @@ void PatchArchiver::doArchive(const BaseContainer& in, const Context& context, O
 
 	const Image	&image = dynamic_cast<const ImageContainer &>(in).image;
 	
-	Image::IndexWindow window(image.getIndexWindow(Rect(0, 0, image.getWidth(), image.getHeight())));	//window is to be destructed exactly in the end of scope, so I use an explicit var
+	Image::ConstIndexWindow window(image.getConstIndexWindow(Rect(0, 0, image.getWidth(), image.getHeight())));
    
 }
 int PatchArchiver::doEstimateSize(const BaseContainer& in) const 
