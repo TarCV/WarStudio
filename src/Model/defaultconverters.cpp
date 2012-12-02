@@ -178,7 +178,7 @@ string DefaultConverters::extractWrite(const BaseNode& node, const string& outfi
 	}
 
 #ifndef NDEBUG
-	if (node.getName() != "END2")
+	if (LUMP_TYPE::RAW == type)
 	{
 		warning("DEBUG: skipped");
 		return "";
