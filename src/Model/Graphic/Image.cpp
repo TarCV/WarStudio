@@ -26,9 +26,10 @@
 
 #include "../../utility.h"
 
-#include <assert.h>
-#include <filesystem>
 #include <boost/algorithm/string/case_conv.hpp>
+#include <assert.h>
+#include <algorithm>
+#include <filesystem>
 
 using namespace std;
 using namespace std::tr2;
@@ -61,7 +62,12 @@ Image::Image(size_t width, size_t height, Color bgcolor, const Palette* palette)
 	}
 	else
 	{
-		doSetPalette(*palette);
+		doSetPalette(*palette, PALETTE_TYPE::WITHOUT_EXTRA_BGCOLOR);
+
+		auto window = getIndexWindow(Rect(0, 0, getWidth(), getHeight()));
+		auto &window_pixels = window.pixels();
+
+		fill(window_pixels.begin(), window_pixels.end(), palette->size());	//fill window with bgcolor (which index is palette->size())
 	}
 }
 
@@ -112,7 +118,7 @@ Image::TRANSPARENCY_TYPE Image::checkTransparency(Image& copy)
 	}
 	else
 	{
-		const auto window = copy.getWindow(Rect(0, 0, copy.getWidth(), copy.getHeight()));
+		const auto window = copy.getConstWindow(Rect(0, 0, copy.getWidth(), copy.getHeight()));
 		for (const auto &pixel : window.pixels())
 		{
 			if (pixel.getA() < 0xff)
@@ -129,7 +135,7 @@ Image::TRANSPARENCY_TYPE Image::checkTransparency(Image& copy)
 	return ret;
 }
 
-void Image::emulateTransparency(Image& copy, Image& mask, bool remove_last_color)
+void Image::emulateTransparency(Image& copy, Image& mask)
 {
 	assert(mask.getWidth() == copy.getWidth());
 	assert(mask.getHeight() == copy.getHeight());
@@ -142,6 +148,8 @@ void Image::emulateTransparency(Image& copy, Image& mask, bool remove_last_color
 
 	if (copy.isPaletted())
 	{
+		assert(copy.is_bgcolor_appended_);
+
 		auto palette = copy.getPalette(PALETTE_TYPE::WITH_EXTRA_BGCOLOR);
 		auto window = copy.getIndexWindow(Rect(0, 0, copy.getWidth(), copy.getHeight()));
 		auto &window_pixels = window.pixels();
@@ -150,30 +158,19 @@ void Image::emulateTransparency(Image& copy, Image& mask, bool remove_last_color
 		{
 			*mask_it = Color(palette[*copy_it].getA(), palette[*copy_it].getA(), palette[*copy_it].getA(), 0xff);
 
-			if (palette[*copy_it].getA() == 0)
+			if (*copy_it == palette.size() - 1)
 			{
-				warning("");
-			}
-
-			if (remove_last_color && *copy_it == palette.size() - 1)
-			{
-				*copy_it = 0;	//todo: use color nearest to black
+				*copy_it = 0;	//todo: use color nearest to the old bgcolor
 			}
 		}
 		assert(copy_it == window_pixels.end());
 
-		for (auto& color : palette)
-		{
-			color.setA(0xff);
-		}
+		palette.erase(--palette.cend());	//todo: consider if it really should be done always as there are removeBgColor method
 
-		if (remove_last_color)
-		{
-			copy.setBackgroundColor(palette.front());	//todo: use color nearest to black
-			palette.erase(--palette.cend());
-		}
+		for_each(palette.begin(), palette.end(), [](Color &color) { color.setA(0xff); });
 
-		copy.doSetPalette(palette);
+		copy.setBackgroundColor(palette.front());	//todo: use color nearest to the old bgcolor
+		copy.doSetPalette(palette, PALETTE_TYPE::WITH_EXTRA_BGCOLOR);
 	}
 	else
 	{
@@ -187,6 +184,60 @@ void Image::emulateTransparency(Image& copy, Image& mask, bool remove_last_color
 		}
 		assert(copy_it == window_pixels.end());
 	}
+}
+
+void Image::removeBgColor(Image& copy)
+{
+	assert(copy.isPaletted());
+
+	const Color bgcolor = copy.getBackgroundColor();
+	const Palette palette = copy.getPalette(PALETTE_TYPE::WITHOUT_EXTRA_BGCOLOR);
+	const size_t bgcolor_index(palette.size());
+	size_t found_index(bgcolor_index);
+	size_t found_difference(0x100);
+
+	auto palette_it(palette.cbegin());
+	size_t index(0);
+	for (; palette_it != palette.cend(); ++palette_it, ++index)
+	{
+		if (bgcolor.getA() < 0xff && palette_it->getA() == 0xff)	continue;
+		if (bgcolor.getA() == 0xff && palette_it->getA() < 0xff)	continue;
+
+		size_t difference = max(max(abs(bgcolor.getR() - palette_it->getR()), abs(bgcolor.getG() - palette_it->getG())), max(abs(bgcolor.getB() - palette_it->getB()), abs(bgcolor.getA() - palette_it->getA())));
+		if (difference < found_difference)
+		{
+			found_index = index;
+			found_difference = difference;
+			if (0 == found_difference)	break;
+		}
+	}
+	assert(index == palette.size() || 0 == found_difference);
+
+	bool should_remove(false);
+	if (found_difference < 0x100)
+	{
+		auto window = copy.getIndexWindow(Rect(0, 0, copy.getWidth(), copy.getHeight()));
+		auto &window_pixels = window.pixels();
+
+		replace(window_pixels.begin(), window_pixels.end(), bgcolor_index, found_index);
+	}
+	else
+	{
+		bool is_bgcolor_used(false);
+		const auto window = copy.getConstIndexWindow(Rect(0, 0, copy.getWidth(), copy.getHeight()));
+		const auto &window_pixels = window.pixels();
+
+		if (any_of(window_pixels.cbegin(), window_pixels.cend(), [bgcolor_index] (size_t index) {return bgcolor_index == index; }))
+		{
+			/*
+				can't substitute the bgcolor and found that it is actually used
+				so we can't do anything
+			*/
+			return;
+		}
+	}
+	
+	copy.doSetPalette(palette, PALETTE_TYPE::WITH_EXTRA_BGCOLOR);
 }
 
 void Image::save(std::string file) const
@@ -205,11 +256,16 @@ void Image::save(std::string file) const
 	FormatInfo	&format = format_info_.at(extension);
 
 	bool remove_last_color(false);
-	if (isPaletted() && copy.image_.colorMapSize() > format.palette_max)
+	if (isPaletted())
 	{
-		assert(copy.is_bgcolor_appended_ && copy.image_.colorMapSize() == format.palette_max + 1);
-		assert(copy.getBackgroundColor().getA() == 0);
-		remove_last_color = true;
+		removeBgColor(copy);
+
+		if (copy.image_.colorMapSize() > format.palette_max)
+		{
+			assert(copy.image_.colorMapSize() == format.palette_max + 1);		
+			assert(copy.getBackgroundColor().getA() == 0);
+			remove_last_color = true;
+		}
 	}
 
 	if (remove_last_color || format.transparency_support != TRANSPARENCY_TYPE::HAS_ALPHA)
@@ -220,7 +276,7 @@ void Image::save(std::string file) const
 		{
 			Image mask(copy.getWidth(), copy.getHeight(), Color(0, 0, 0, 0xff));
 
-			emulateTransparency(copy, mask, remove_last_color);
+			emulateTransparency(copy, mask);
 
 			sys::path mask_path(path.branch_path());
 			mask_path /= path.basename() + "__mask" + extension;
@@ -233,10 +289,12 @@ void Image::save(std::string file) const
 
 void Image::setBackgroundColor(Color newcolor)
 {
-	if (is_bgcolor_appended_)
+	if (isPaletted())
 	{
+		assert(is_bgcolor_appended_);
 		image_.colorMap(image_.colorMapSize() - 1, newcolor.getNativeColor_());
 	}
+	
 	image_.backgroundColor(newcolor.getNativeColor_());
 }
 
@@ -293,12 +351,12 @@ void Image::setAnchor(size_t x, size_t y)
 	image_.quantize();
 	doSetPalette(newpalette);
 }*/
-void Image::doSetPalette(const Palette& newpalette)
+void Image::doSetPalette(const Palette& newpalette, PALETTE_TYPE palette_has_bgcolor)
 {
 	image_.classType(MagickLib::ClassType::PseudoClass);
 	
 	const Color bgcolor = getBackgroundColor();
-	if (bgcolor.getA() != 0xff)
+	if (bgcolor.getA() != 0xff)	//todo: if any color in the palette has an alpha value
 	{
 		image_.type(MagickLib::ImageType::PaletteMatteType);
 	}
@@ -307,17 +365,7 @@ void Image::doSetPalette(const Palette& newpalette)
 		image_.type(MagickLib::ImageType::PaletteType);
 	}
 
-	bool found_bgcolor(false);
-	for (const auto &color : newpalette)
-	{
-		if (bgcolor == color)
-		{
-			found_bgcolor = true;
-			break;
-		}
-	}
-
-	if (!found_bgcolor)
+	if (PALETTE_TYPE::WITHOUT_EXTRA_BGCOLOR == palette_has_bgcolor)
 	{
 		image_.colorMapSize(newpalette.size() + 1);
 		image_.colorMap(newpalette.size(), bgcolor.getNativeColor_());
@@ -326,6 +374,7 @@ void Image::doSetPalette(const Palette& newpalette)
 	else
 	{
 		image_.colorMapSize(newpalette.size());
+		is_bgcolor_appended_ = false;
 	}
 
 	size_t i(0);
@@ -383,60 +432,52 @@ void Image::setColor(ImagePixel& pixel, const Color& c)
 	image_.pixelColor(pixel.x_, pixel.y_, c.getNativeColor_());
 }*/
 
-Image::IndexWindow::Pixels* Image::createIndexBufferFromRect(const Rect& window) const
+Image::IndexWindow::Pixels Image::createIndexBufferFromRect(const Rect& window) const
 {
 	assert(isPaletted());
 
-	unique_ptr<IndexWindow::Pixels> buffer(new IndexWindow::Pixels(window.width * window.height));
+	IndexWindow::Pixels buffer(window.width * window.height);
 	image_.getConstPixels(window.offset_X, window.offset_Y, window.width, window.height);
 	const MagickLib::IndexPacket *indexes = image_.getConstIndexes();
-	auto buffer_it = buffer->begin();
-	auto index_it = &indexes[0];
-	for(; buffer_it != buffer->end(); ++buffer_it, ++index_it)
-	{
-		*buffer_it = static_cast<IndexWindow::Pixels::value_type>(*index_it);
-	}
-	assert(index_it == indexes + window.width * window.height);
 
-	return buffer.release();
+	assert(transform(indexes, indexes + window.width * window.height, buffer.begin(),
+		             [] (const MagickLib::IndexPacket native_index) { return static_cast<IndexWindow::Pixels::value_type>(native_index); })
+		   == buffer.end());
+
+	return buffer;
 }
-Image::Window::Pixels* Image::createBufferFromRect(const Rect& window) const
+Image::Window::Pixels Image::createBufferFromRect(const Rect& window) const
 {
-//	assert(!isPaletted());
+	assert(!isPaletted());
 
-	unique_ptr<Window::Pixels> buffer(new Window::Pixels(window.width * window.height));
-
+	Window::Pixels buffer(window.width * window.height);
 	const MagickLib::PixelPacket *colors = image_.getConstPixels(window.offset_X, window.offset_Y, window.width, window.height);
 
-	auto buffer_it = buffer->begin();
-	auto colors_it = &colors[0];
-	for(; buffer_it != buffer->end(); ++buffer_it, ++colors_it)
-	{
-		*buffer_it = Color(*colors_it);
-	}
-	assert(colors_it == colors + window.width * window.height);
+	assert(transform(colors, colors + window.width * window.height, buffer.begin(), 
+		             [] (const MagickLib::PixelPacket& native_color) { return static_cast<Window::Pixels::value_type>(native_color); })
+		   == buffer.end());
 
-	return buffer.release();
+	return buffer;
 }
 
 Image::IndexWindow Image::getIndexWindow(const Rect& window)
 {
-	return IndexWindow(window, createIndexBufferFromRect(window), this);
+	return IndexWindow(window, createIndexBufferFromRect(window), *this);
 }
 
-const Image::IndexWindow Image::getIndexWindow(const Rect& window) const
+const Image::ConstIndexWindow Image::getConstIndexWindow(const Rect& window) const
 {
-	return IndexWindow(window, createIndexBufferFromRect(window), nullptr);
+	return ConstIndexWindow(window, createIndexBufferFromRect(window));
 }
 
 Image::Window Image::getWindow(const Rect& window)
 {
-	return Window(window, createBufferFromRect(window), this);
+	return Window(window, createBufferFromRect(window), *this);
 }
 
-const Image::Window Image::getWindow(const Rect& window) const
+const Image::ConstWindow Image::getConstWindow(const Rect& window) const
 {
-	return Window(window, createBufferFromRect(window), nullptr);
+	return ConstWindow(window, createBufferFromRect(window));
 }
 
 void Image::setWindow(const IndexWindow& buffer)
@@ -447,16 +488,11 @@ void Image::setWindow(const IndexWindow& buffer)
 	image_.getPixels(window.offset_X, window.offset_Y, window.width, window.height);
 	MagickLib::IndexPacket *indexes = image_.getIndexes();
 
-	auto buffer_it = buffer.buffer_->begin();
-	auto index_it = &indexes[0];
-	for(; buffer_it != buffer.buffer_->end(); ++buffer_it, ++index_it)
-	{
-		*index_it = static_cast<MagickLib::IndexPacket>(*buffer_it);
-	}
-	assert(index_it == indexes + window.width * window.height);
-	image_.syncPixels();
+	assert(transform(buffer.buffer_.begin(), buffer.buffer_.end(), indexes,
+		   [] (size_t index) { return static_cast<MagickLib::IndexPacket>(index); })
+		   == indexes + window.width * window.height);
 
-	createIndexBufferFromRect(window);
+	image_.syncPixels();
 }
 
 void Image::setWindow(const Window& buffer)
@@ -466,13 +502,9 @@ void Image::setWindow(const Window& buffer)
 	const Rect& window = buffer.window_;
 	MagickLib::PixelPacket *colors = image_.getPixels(window.offset_X, window.offset_Y, window.width, window.height);
 
-	auto buffer_it = buffer.buffer_->begin();
-	auto colors_it = colors;
-	for(; buffer_it != buffer.buffer_->end(); ++buffer_it, ++colors_it)
-	{
-		*colors_it = buffer_it->getNativeColor_();
-	}
-	assert(colors_it == colors + window.width * window.height);
+	assert(transform(buffer.buffer_.begin(), buffer.buffer_.end(), colors,
+		   [] (const Color& color) { return color.getNativeColor_(); })
+		   == colors + window.width * window.height);
 
 	image_.syncPixels();
 }

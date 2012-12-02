@@ -27,7 +27,6 @@
 #include <string>
 #include <vector>
 #include <map>
-#include <memory>
 
 #include <Magick++.h>
 
@@ -44,34 +43,59 @@ struct Rect
 };
 
 template<class T>
-	class ImageWindowTemplate
+	class ConstImageWindowTemplate
 {
 public:
-	typedef std::vector<T> Pixels;
+	typedef typename std::vector<T> Pixels;
 
-	Pixels& pixels() {return *buffer_;}
-	const Pixels& pixels() const {return *buffer_;}
+	const Pixels& pixels() const {return buffer_;}
 
-	void flush() {image_->setWindow(*this);}
+	ConstImageWindowTemplate(const ConstImageWindowTemplate<T> &&r) : window_(std::move(r.window_)), buffer_(std::move(r.buffer_)) {}
 
-	~ImageWindowTemplate()	{flush();}
+	virtual ~ConstImageWindowTemplate() {}
+
+protected:
+	friend class Image;
+	ConstImageWindowTemplate(const Rect& window, Pixels&& buffer) : window_(window), buffer_(std::move(buffer)) {}
+	
+protected:
+	const Rect	window_;
+	Pixels	buffer_;
+
+private:
+	//delete
+	ConstImageWindowTemplate(const ConstImageWindowTemplate<T> &);
+	const ConstImageWindowTemplate<T>& operator=(const ConstImageWindowTemplate<T> &) const;
+};
+
+template<class T>
+	class ImageWindowTemplate : ConstImageWindowTemplate<T>
+{
+public:
+	Pixels& pixels() {return buffer_;}
+
+	void flush() {image_.setWindow(*this);}
+
+	ImageWindowTemplate(const ImageWindowTemplate<T> &&r) : window_(std::move(r.window_)), buffer_(std::move(r.buffer_)), image_(r.image_) {}
+
+	~ImageWindowTemplate() override {flush();}
 
 private:
 	friend class Image;
-	ImageWindowTemplate(const Rect& window, Pixels* buffer, Image* image = nullptr) : window_(window), buffer_(buffer), image_(image) {}
+	ImageWindowTemplate(const Rect& window, Pixels&& buffer, Image& image) : ConstImageWindowTemplate(window, std::move(buffer)), image_(image) {}
+
 private:
-	Image*	image_;
-	Rect	window_;
-	std::unique_ptr<Pixels>	buffer_;
-//	bool	fast_;
+	Image&	image_;
 };
 
 //class ImagePixel;
 class Image
 {
 public:
-	typedef ImageWindowTemplate<size_t>	IndexWindow;
-	typedef ImageWindowTemplate<Color>	Window;
+	typedef ConstImageWindowTemplate<size_t> ConstIndexWindow;
+	typedef ImageWindowTemplate<size_t> IndexWindow;
+	typedef ConstImageWindowTemplate<Color>	ConstWindow;
+	typedef ImageWindowTemplate<Color> Window;
 
 	Image(size_t width, size_t height, Color bgcolor = Color(0, 0, 0, 0), const Palette* palette = nullptr);
 	Image(std::string file);
@@ -82,9 +106,9 @@ public:
     const ImagePixel getPixel(size_t x, size_t y) const;*/
 	
 	IndexWindow getIndexWindow(const Rect& window);
-	const IndexWindow getIndexWindow(const Rect& window) const;
+	const ConstIndexWindow getConstIndexWindow(const Rect& window) const;
 	Window getWindow(const Rect& window);
-	const Window getWindow(const Rect& window) const;
+	const ConstWindow getConstWindow(const Rect& window) const;
 
 	void setBackgroundColor(Color newcolor);
 	Color getBackgroundColor() const;
@@ -111,19 +135,20 @@ private:
 	friend class Window;
 	void setWindow(const IndexWindow& buffer);
 	void setWindow(const Window& buffer);
-	IndexWindow::Pixels* createIndexBufferFromRect(const Rect& window) const;
-	Window::Pixels* createBufferFromRect(const Rect& window) const;
+	IndexWindow::Pixels createIndexBufferFromRect(const Rect& window) const;
+	Window::Pixels createBufferFromRect(const Rect& window) const;
 
 
 private:
-	void doSetPalette(const Palette& newpalette);
+	void doSetPalette(const Palette& newpalette, PALETTE_TYPE palette_has_bgcolor);
 
 	static void initFormatData();
 
 	enum class TRANSPARENCY_TYPE {NONE, HAS_TRANSPARENCY, HAS_ALPHA};
 	static TRANSPARENCY_TYPE checkTransparency(Image& copy);
 
-	static void emulateTransparency(Image& copy, Image& mask, bool remove_last_color);
+	static void removeBgColor(Image& copy);
+	static void emulateTransparency(Image& copy, Image& mask);
 
 	struct FormatInfo
 	{
