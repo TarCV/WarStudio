@@ -76,5 +76,7 @@ private:
 	}
 };
 
+unsigned int difference(const Color& a, const Color& b, uint8_t alpha_tolerance = 5);
+
 	}
 }
