@@ -105,6 +105,9 @@
     <ClCompile Include="src\Model\Archivers\Doom\PatchArchiver.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="src\Model\Graphic\Color.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Model\baseconverter.h">

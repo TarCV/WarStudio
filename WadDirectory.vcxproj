@@ -58,6 +58,7 @@
       <TreatSpecificWarningsAsErrors>4183;%(TreatSpecificWarningsAsErrors)</TreatSpecificWarningsAsErrors>
       <DisableSpecificWarnings>4482;%(DisableSpecificWarnings)</DisableSpecificWarnings>
       <SmallerTypeCheck>true</SmallerTypeCheck>
+      <TreatWarningAsError>true</TreatWarningAsError>
     </ClCompile>
     <Link>
       <TargetMachine>MachineX86</TargetMachine>
@@ -94,6 +95,7 @@
     <ClCompile Include="src\Model\Archivers\ArchiverRegistry.cpp" />
     <ClCompile Include="src\Model\Converters\ConverterRegistry.cpp" />
     <ClCompile Include="src\Model\Converters\PalToImgConverter.cpp" />
+    <ClCompile Include="src\Model\Graphic\Color.cpp" />
     <ClCompile Include="src\Model\Nodes\directorynode.cpp" />
     <ClCompile Include="src\Model\Writers\WriterRegistry.cpp" />
     <ClCompile Include="src\Model\Writers\ImageWriter.cpp" />
