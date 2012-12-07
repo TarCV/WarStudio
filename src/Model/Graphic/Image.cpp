@@ -51,14 +51,12 @@ Image::Image(size_t width, size_t height, Color bgcolor, const Palette* palette)
 	image_(Magick::Geometry(width, height),bgcolor.getNativeColor_()),
 	anchor_x_(0),
 	anchor_y_(0),
-	is_anchor_set_(false),
 	is_bgcolor_appended_(false)
 {
     image_.backgroundColor(bgcolor.getNativeColor_());
 	if (nullptr == palette)
 	{
 		image_.classType(MagickLib::ClassType::DirectClass);
-		image_.depth(8);
 	}
 	else
 	{
@@ -75,7 +73,6 @@ Image::Image(string file) :
 	image_(),
 	anchor_x_(0),
 	anchor_y_(0),
-	is_anchor_set_(false),
 	is_bgcolor_appended_(false)
 {
 	open(file);
@@ -85,7 +82,6 @@ Image::Image(const Image& image) :
 	image_(image.image_),
 	anchor_x_(image.anchor_x_),
 	anchor_y_(image.anchor_y_),
-	is_anchor_set_(image.is_anchor_set_),
 	is_bgcolor_appended_(image.is_bgcolor_appended_)
 {
 }
@@ -186,7 +182,7 @@ void Image::emulateTransparency(Image& copy, Image& mask)
 	}
 }
 
-void Image::removeBgColor(Image& copy)
+bool Image::removeBgColor(Image& copy)
 {
 	assert(copy.isPaletted());
 
@@ -194,7 +190,7 @@ void Image::removeBgColor(Image& copy)
 	const Palette palette = copy.getPalette(PALETTE_TYPE::WITHOUT_EXTRA_BGCOLOR);
 	const size_t bgcolor_index(palette.size());
 	size_t found_index(bgcolor_index);
-	size_t found_difference(0x100);
+	unsigned int found_difference(UINT_MAX);
 
 	auto palette_it(palette.cbegin());
 	size_t index(0);
@@ -203,11 +199,11 @@ void Image::removeBgColor(Image& copy)
 		if (bgcolor.getA() < 0xff && palette_it->getA() == 0xff)	continue;
 		if (bgcolor.getA() == 0xff && palette_it->getA() < 0xff)	continue;
 
-		size_t difference = max(max(abs(bgcolor.getR() - palette_it->getR()), abs(bgcolor.getG() - palette_it->getG())), max(abs(bgcolor.getB() - palette_it->getB()), abs(bgcolor.getA() - palette_it->getA())));
-		if (difference < found_difference)
+		unsigned int cur_difference = difference(bgcolor, *palette_it);
+		if (cur_difference < found_difference)
 		{
 			found_index = index;
-			found_difference = difference;
+			found_difference = cur_difference;
 			if (0 == found_difference)	break;
 		}
 	}
@@ -233,17 +229,104 @@ void Image::removeBgColor(Image& copy)
 				can't substitute the bgcolor and found that it is actually used
 				so we can't do anything
 			*/
-			return;
+			return false;
 		}
 	}
 	
-	copy.doSetPalette(palette, PALETTE_TYPE::WITH_EXTRA_BGCOLOR);
+	copy.image_.colorMapSize(copy.image_.colorMapSize() - 1);
+	//copy.doSetPalette(palette, PALETTE_TYPE::WITH_EXTRA_BGCOLOR);
+	return true;
+}
+
+Rect Image::getRectForAnchor() const
+{
+	assert(anchor_x_ != 0 || anchor_y_ != 0);
+
+	Rect ret(0, 0, getWidth(), getHeight());
+
+	bool is_x_inside_picture = (0 <= anchor_x_ && anchor_x_ < ret.width);
+	bool is_y_inside_picture = (0 <= anchor_y_ && anchor_y_ < ret.height);
+
+/*
+
+	*(2)-+ - -+-(2)*		  * - anchor
+	i    i         i--output image dimensions		
+	      *(3)i				(1)	- if clause
+	i - -+----+- - i	+---+--input image dimensions
+	 (3)*|(1)*|(3)  
+	i    |    |*   i
+	i - -+----+- - i
+	     i *       i
+	i     (3) i     
+	*(2)-+- - +-(2)*
+
+
+*/
+
+	if (is_x_inside_picture || is_y_inside_picture)	//(1), (3)
+	{
+		auto helper = [](signed int anchor, bool other_inside, size_t &out_offset, size_t &out_size) {
+			bool inside_picture = (0 <= anchor && anchor < out_size);
+			if (anchor < 0)
+			{
+				out_offset = max<size_t>(MARKER_WIDTH, -anchor);	//size will be automatically changed later
+
+			} else if (other_inside)
+			{
+				out_size = max<size_t>(out_size + MARKER_WIDTH, anchor + 1);
+			}
+		};
+		helper(anchor_x_, is_y_inside_picture, ret.offset_X, ret.width);
+		helper(anchor_y_, is_x_inside_picture, ret.offset_Y, ret.height);
+	}
+	else	//(2): is exactly in the corner and is always outside of the image, so we never need to add MARKER_WIDTH!
+	{
+		auto helper = [](signed int anchor, size_t &out_offset, size_t &out_size) {
+			if (anchor < 0)
+			{
+				out_offset = -anchor;	//size will be automatically changed later
+			}
+			else
+			{
+				out_size = anchor + 1;
+			}
+		};
+		helper(anchor_x_, ret.offset_X, ret.width);
+		helper(anchor_y_, ret.offset_Y, ret.height);
+	}
+
+	if (ret.offset_X > 0)	ret.width += ret.offset_X;
+	if (ret.offset_Y > 0)	ret.height += ret.offset_Y;
+
+	ret.width = max(ret.width, MARKER_WIDTH);
+	ret.height = max(ret.height, MARKER_WIDTH);
+
+	return ret;
+}
+
+void Image::fillRectangle(const Rect& rectangle, size_t colorindex)
+{
+	assert(isPaletted());	//todo: implement for full color
+
+	auto window = getIndexWindow(rectangle);
+	auto& indexes = window.pixels();
+	fill(indexes.begin(), indexes.end(), colorindex);
+}
+
+void Image::composite(const Image& source, size_t at_x, size_t at_y)
+{
+	assert(isPaletted());	//todo: implement for full color
+
+	Rect destination(at_x, at_y, source.getWidth(), source.getHeight());
+	const auto source_window = source.getConstIndexWindow(Rect(0, 0, destination.width, destination.height));
+	const auto& source_pixels = source_window.pixels();
+	auto dest_window = getIndexWindow(destination);
+	auto& dest_pixels = dest_window.pixels();
+	assert(copy(source_pixels.cbegin(), source_pixels.cend(), dest_pixels.begin()) == dest_pixels.end());
 }
 
 void Image::save(std::string file) const
 {
-	Image	copy(*this);
-	//todo: support file format abstraction (e.g. emulate transparency using layers etc.)
 	//todo: support anchor offsets
 	
 	initFormatData();
@@ -251,32 +334,54 @@ void Image::save(std::string file) const
 	const string extension = boost::to_lower_copy(path.extension());
 	if (format_info_.count(extension) == 0)
 	{
-		error("Writing in the image format is not supported");
+		error("Writing in the specified image format is not supported");
 	}
 	FormatInfo	&format = format_info_.at(extension);
+
+	unique_ptr<Image> copy;
+	bool has_anchor = anchor_x_ != 0 || anchor_y_ != 0;
+	Rect copy_dimensions = Rect();	//offset_X/Y are the offsets of the input image in the output image
+	if (has_anchor)
+	{
+		copy_dimensions = getRectForAnchor();
+		const auto palette = getPalette(PALETTE_TYPE::WITHOUT_EXTRA_BGCOLOR);
+		copy.reset(new Image(copy_dimensions.width, copy_dimensions.height, getBackgroundColor(), &palette));
+		copy->composite(*this, copy_dimensions.offset_X, copy_dimensions.offset_Y);
+
+		if (anchor_x_ <= 0 && anchor_y_ <= 0)
+		{
+			//marker would be at (0, 0) of the output image, so don't draw it
+			has_anchor = false;
+		}
+	}
+	else
+	{
+		copy.reset(new Image(*this));
+	}
 
 	bool remove_last_color(false);
 	if (isPaletted())
 	{
-		removeBgColor(copy);
+		bool removed = removeBgColor(*copy);
 
-		if (copy.image_.colorMapSize() > format.palette_max)
+		if (copy->image_.colorMapSize() > format.palette_max)
 		{
-			assert(copy.image_.colorMapSize() == format.palette_max + 1);		
-			assert(copy.getBackgroundColor().getA() == 0);
+			assert(copy->image_.colorMapSize() == format.palette_max + 1);		
+			assert(copy->getBackgroundColor().getA() == 0);
+			assert(!removed);
 			remove_last_color = true;
 		}
 	}
 
 	if (remove_last_color || format.transparency_support != TRANSPARENCY_TYPE::HAS_ALPHA)
 	{
-		const TRANSPARENCY_TYPE transparency_needed(checkTransparency(copy));
+		const TRANSPARENCY_TYPE transparency_needed(checkTransparency(*copy));
 
 		if (remove_last_color || static_cast<int>(transparency_needed) > static_cast<int>(format.transparency_support))
 		{
-			Image mask(copy.getWidth(), copy.getHeight(), Color(0, 0, 0, 0xff));
+			Image mask(copy->getWidth(), copy->getHeight(), Color(0, 0, 0, 0xff));
 
-			emulateTransparency(copy, mask);
+			emulateTransparency(*copy, mask);
 
 			sys::path mask_path(path.branch_path());
 			mask_path /= path.basename() + "__mask" + extension;
@@ -284,7 +389,56 @@ void Image::save(std::string file) const
 		}
 	}
 
-	copy.image_.write(file);
+	if (has_anchor)
+	{
+		enum class MarkerSection{BEFORE, IN, AFTER};
+		auto getMarkerSection = [] (signed int anchor_position, size_t image_size) -> MarkerSection {
+			if (anchor_position < 0)
+			{
+				return MarkerSection::BEFORE;
+
+			} else if (anchor_position < image_size)
+			{
+				return MarkerSection::IN;
+
+			} else
+			{
+				return MarkerSection::AFTER;
+			}
+		};
+		MarkerSection x_section = getMarkerSection(anchor_x_, getWidth());
+		MarkerSection y_section = getMarkerSection(anchor_y_, getHeight());
+
+		auto getMarkerOffset = [] (MarkerSection section, size_t size, MarkerSection other_section, size_t other_offset) -> size_t {
+			if (MarkerSection::BEFORE == section)
+			{
+				return 0;
+			} else if (MarkerSection::AFTER == section || MarkerSection::IN == other_section)
+			{
+				return (size - MARKER_WIDTH);
+			} else
+			{
+				int ret = other_offset - MARKER_WIDTH/2;
+				if (ret < 0)	ret = 0;
+				return ret;
+			}
+		};
+		Rect h_marker(0, copy_dimensions.offset_Y + anchor_y_, MARKER_WIDTH, 1);
+		Rect v_marker(copy_dimensions.offset_X + anchor_x_, 0, 1, MARKER_WIDTH);
+		h_marker.offset_X = getMarkerOffset(x_section, copy_dimensions.width,  y_section, v_marker.offset_X);
+		v_marker.offset_Y = getMarkerOffset(y_section, copy_dimensions.height, x_section, h_marker.offset_Y);
+
+		const Color bg_color = copy->getBackgroundColor();
+		const auto palette = copy->getPalette(PALETTE_TYPE::WITHOUT_EXTRA_BGCOLOR);
+		auto ignore_error = [] (unsigned int val) { return ((val != UINT_MAX) ? val : 0); };
+		auto difference_cmp = [bg_color, &ignore_error] (const Color& a, const Color& b) { return (ignore_error(difference(a, bg_color)) < ignore_error(difference(b, bg_color))); };
+		size_t marker_color = std::distance(palette.begin(), std::max_element(palette.begin(), palette.end(), difference_cmp));
+
+		copy->fillRectangle(h_marker, marker_color);
+		copy->fillRectangle(v_marker, marker_color);
+	}
+
+	copy->image_.write(file);
 }
 
 void Image::setBackgroundColor(Color newcolor)
@@ -341,7 +495,6 @@ void Image::setAnchor(size_t x, size_t y)
 {
 	anchor_x_ = x;
 	anchor_y_ = y;
-	is_anchor_set_ = true;
 }
 
 /*void Image::setPalette(const Palette& newpalette)
@@ -353,8 +506,6 @@ void Image::setAnchor(size_t x, size_t y)
 }*/
 void Image::doSetPalette(const Palette& newpalette, PALETTE_TYPE palette_has_bgcolor)
 {
-	image_.classType(MagickLib::ClassType::PseudoClass);
-	
 	const Color bgcolor = getBackgroundColor();
 	if (bgcolor.getA() != 0xff)	//todo: if any color in the palette has an alpha value
 	{
@@ -414,13 +565,12 @@ void Image::resize(size_t newwidth, size_t newheight)
     image_.size(newsize);
 }
 
-void Image::trim()
+/*void Image::trim()
 {
 	image_.trim();
 }
 
-
-/*Color Image::getColor(const ImagePixel& pixel) const
+Color Image::getColor(const ImagePixel& pixel) const
 {
 	assert(!isPaletted());
 	return Color(image_.pixelColor(pixel.x_, pixel.y_));
@@ -432,10 +582,24 @@ void Image::setColor(ImagePixel& pixel, const Color& c)
 	image_.pixelColor(pixel.x_, pixel.y_, c.getNativeColor_());
 }*/
 
+bool Image::doContainsPoint(size_t x, size_t y) const
+{
+	bool ret = 0 <= x && x < getWidth();
+	ret = ret && 0 <= y && y < getHeight();
+	return ret;
+}
+bool Image::doContainsRect(const Rect& rect) const
+{
+	bool ret = doContainsPoint(rect.offset_X, rect.offset_Y);
+	ret = ret && doContainsPoint(rect.offset_X + rect.width - 1, rect.offset_Y + rect.height - 1);
+	return ret;
+}
+
 Image::IndexWindow::Pixels Image::createIndexBufferFromRect(const Rect& window) const
 {
 	assert(isPaletted());
-
+	assert(doContainsRect(window));
+		
 	IndexWindow::Pixels buffer(window.width * window.height);
 	image_.getConstPixels(window.offset_X, window.offset_Y, window.width, window.height);
 	const MagickLib::IndexPacket *indexes = image_.getConstIndexes();
@@ -449,6 +613,7 @@ Image::IndexWindow::Pixels Image::createIndexBufferFromRect(const Rect& window) 
 Image::Window::Pixels Image::createBufferFromRect(const Rect& window) const
 {
 	assert(!isPaletted());
+	assert(doContainsRect(window));
 
 	Window::Pixels buffer(window.width * window.height);
 	const MagickLib::PixelPacket *colors = image_.getConstPixels(window.offset_X, window.offset_Y, window.width, window.height);

@@ -39,6 +39,8 @@ struct Rect
 {
 	size_t offset_X, offset_Y;
 	size_t width, height;
+	Rect() : offset_X(0), offset_Y(0), width(0), height(0) {}
+	
 	Rect(size_t x, size_t y, size_t width_, size_t height_) : offset_X(x), offset_Y(y), width(width_), height(height_) {}
 };
 
@@ -125,7 +127,11 @@ public:
 	bool isPaletted() const;
 
     void resize(size_t newwidth, size_t newheight);
-	void trim();
+//	void trim();
+
+	void fillRectangle(const Rect&, size_t colorindex);
+
+	void composite(const Image&, size_t at_x, size_t at_y);
 
 private:
 /*	friend class ImagePixel;
@@ -142,13 +148,18 @@ private:
 private:
 	void doSetPalette(const Palette& newpalette, PALETTE_TYPE palette_has_bgcolor);
 
+	bool doContainsPoint(size_t x, size_t y) const;
+	bool doContainsRect(const Rect&) const;
+
 	static void initFormatData();
 
 	enum class TRANSPARENCY_TYPE {NONE, HAS_TRANSPARENCY, HAS_ALPHA};
 	static TRANSPARENCY_TYPE checkTransparency(Image& copy);
 
-	static void removeBgColor(Image& copy);
+	static bool removeBgColor(Image& copy);
 	static void emulateTransparency(Image& copy, Image& mask);
+
+	Rect getRectForAnchor() const;
 
 	struct FormatInfo
 	{
@@ -164,9 +175,10 @@ private:
 
 	bool    is_bgcolor_appended_;	//true if bgcolor was automatically appended to the palette
 
-	size_t	anchor_x_, anchor_y_;
-	bool    is_anchor_set_;
+	static const size_t MARKER_WIDTH = 5;
+	static_assert(MARKER_WIDTH % 2 == 1, "MARKER_WIDTH must have an odd value");
 
+	signed int	anchor_x_, anchor_y_;
 };
 
 /*class ImagePixel
