@@ -19,7 +19,7 @@
 
 */
 
-#include "stdafx.h"
+#include "../../../stdafx.h"
 
 #include "wadlump.h"
 #include "wad.h"

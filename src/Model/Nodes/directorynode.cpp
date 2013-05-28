@@ -19,9 +19,9 @@
 
 */
 
-#include "stdafx.h"
+#include "../../stdafx.h"
 
-#include "directorynode.h"
+#include "DirectoryNode.h"
 
 namespace warstudio {
 	namespace model {

@@ -19,17 +19,17 @@
 
 */
 
-#include "stdafx.h"
+#include "../../stdafx.h"
 
 #include "BaseNode.h"
-#include "directorynode.h"
+#include "DirectoryNode.h"
 
 #include <typeinfo>
 
 namespace warstudio {
 	namespace model {
 	
-bool BaseNode::parentfilter() const {
+bool BaseNode::parentfilter() const throw() {
 	return typeid(getParent()) == typeid(this);
 };
 void BaseNode::setName(std::string newname) {

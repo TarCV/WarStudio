@@ -22,7 +22,8 @@
 #pragma once
 
 #include <string>
-#include <iosfwd>
+#include <iostream>
+#include <assert.h>
 
 namespace warstudio {
 

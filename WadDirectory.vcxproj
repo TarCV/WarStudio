@@ -86,6 +86,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="src\Model\AdapterChain.cpp" />
     <ClCompile Include="src\Model\Archivers\Doom\ColormapArchiver.cpp" />
     <ClCompile Include="src\Model\Archivers\Doom\FlatArchiver.cpp" />
     <ClCompile Include="src\Model\Archivers\Doom\PatchArchiver.cpp" />
@@ -101,7 +102,7 @@
     <ClCompile Include="src\Model\Writers\ImageWriter.cpp" />
     <ClCompile Include="src\Model\Archivers\Doom\PLAYPAL.cpp" />
     <ClCompile Include="src\Model\Converters\BaseConverter.cpp" />
-    <ClCompile Include="src\Model\Archivers\basearchiver.cpp" />
+    <ClCompile Include="src\Model\Archivers\BaseArchiver.cpp" />
     <ClCompile Include="src\Model\Archivers\Generic\DummyArchiver.cpp" />
     <ClCompile Include="src\Model\Nodes\BaseNode.cpp" />
     <ClCompile Include="src\Model\Graphic\Image.cpp" />
@@ -114,13 +115,15 @@
     <ClCompile Include="src\Model\Nodes\Doom\wadlump.cpp" />
     <ClCompile Include="src\Model\Nodes\Doom\wadlumptyper.cpp" />
     <ClCompile Include="src\windowstream.cpp" />
-    <ClCompile Include="src\Model\Writers\basewriter.cpp" />
+    <ClCompile Include="src\Model\Writers\BaseWriter.cpp" />
     <ClCompile Include="src\Model\Writers\Raw.cpp" />
     <ClCompile Include="src\utility.cpp" />
     <ClCompile Include="src\waddir.cpp" />
     <ClCompile Include="src\tempfile.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="src\exceptions.h" />
+    <ClInclude Include="src\Model\AdapterChain.h" />
     <ClInclude Include="src\Model\Archivers\Doom\ColormapArchiver.h" />
     <ClInclude Include="src\Model\Archivers\Doom\FlatArchiver.h" />
     <ClInclude Include="src\Model\Archivers\Doom\PatchArchiver.h" />
@@ -143,7 +146,7 @@
     <ClInclude Include="src\Model\Graphic\Palette.h" />
     <ClInclude Include="src\Model\Converters\BaseConverter.h" />
     <ClInclude Include="src\config.h" />
-    <ClInclude Include="src\Model\Archivers\basearchiver.h" />
+    <ClInclude Include="src\Model\Archivers\BaseArchiver.h" />
     <ClInclude Include="src\Model\Archivers\Generic\DummyArchiver.h" />
     <ClInclude Include="Model\baseconverter.h" />
     <ClInclude Include="src\Model\Nodes\BaseNode.h" />
@@ -161,7 +164,7 @@
     <ClInclude Include="src\Model\Nodes\Doom\wadlump.h" />
     <ClInclude Include="src\Model\Nodes\Doom\wadlumptyper.h" />
     <ClInclude Include="src\windowstream.h" />
-    <ClInclude Include="src\Model\Writers\basewriter.h" />
+    <ClInclude Include="src\Model\Writers\BaseWriter.h" />
     <ClInclude Include="src\Model\Writers\Raw.h" />
     <ClInclude Include="src\stdafx.h" />
     <ClInclude Include="src\utility.h" />

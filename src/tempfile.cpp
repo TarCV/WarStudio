@@ -22,13 +22,10 @@
 #include "stdafx.h"
 
 #include "tempfile.h"
-
 #include "utility.h"
-
-#include <filesystem>
+#include "filesystem.h"
 
 using namespace std;
-using namespace std::tr2;
 
 namespace warstudio {
 
@@ -38,7 +35,7 @@ TempFile::TempFile()
 TempFile::TempFile(string path) :
 	path_(path)
 {
-	if (!sys::exists<sys::path>(path) || sys::is_directory<sys::path>(path))
+    if (!exists(path) || is_directory(path))
 	{
 		error("no such file");
 	}
@@ -59,9 +56,18 @@ void TempFile::Delete()
 void TempFile::CreateNew()
 {
 	Delete();
+
+//TODO: check returns values
+#ifdef WINVER
 	char *tempfile = _tempnam("temp", "wad");
 	path_ = tempfile;
 	free(tempfile);
+#else
+    char tempfile[] = "wadXXXXXXXX";
+    int fd = mkstemp(tempfile);
+    close(fd);
+    path_ = tempfile;
+#endif
 }
 string TempFile::Path() const	
 {

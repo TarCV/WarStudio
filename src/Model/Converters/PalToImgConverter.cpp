@@ -19,7 +19,7 @@
 
 */
 
-#include "stdafx.h"
+#include "../../stdafx.h"
 
 #include "PalToImgConverter.h"
 #include "../Containers/PaletteContainer.h"

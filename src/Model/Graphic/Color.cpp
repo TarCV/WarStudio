@@ -20,12 +20,13 @@
 
 */
 
-#include "stdafx.h"
+#include "../../stdafx.h"
 
 #include "Color.h"
 
 #include <algorithm>
 #include <assert.h>
+#include <climits>
 
 namespace warstudio {
 	namespace model {

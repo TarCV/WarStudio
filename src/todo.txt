@@ -1,0 +1,95 @@
+TODO notes
+
+implement lump dependencies:
+
+patches depend on PLAYPAL (hard)
+flats depend on PLAYPAL (hard)
+maps depend on all resources (loosely)
+
+--
+
+- use types from stdint.h when reading from streams
+- move lump/container validity checks to separate methods and rewrite extract/archive methods keeping in mind that container data now may be not entirely correct
+- experiment with PaletteMatteType when implementing Doom patch adapters
+- check HACX for corrupted map lumpnames
+- write ReferenceOrNull template class
+- write NewObject template that can be only set to unique_ptr object (has conversion operator =)
+- check if some asserts should be converted to release checks
+- use flush or seekg&seekp so StreamBuffer was in correct state for both reading and writing
+- replace 'error(<some internal machinery error>)' to 'throw <InternalException+Type>()'
+- implement Project class which manages lump overload, inherited lumps etc.
+- check if usual iterators can be replaced with const ones
+- adapter code is untrusted, make it impossible to change anything const from adapters even using const_cast and reinterpret_cast
+- eliminate all const_cast from the code
+
+Guidelines ==============================================
+
+- ALL_UPPERCASE for constants and enum typenames
+- Function argument names MAY have underscore as the last character
+- enum constants should be always qualified
+- 'Naked' heap operations are not allowed
+	operator new is allowed only in constructors and members returning pointers
+	operator delete is allowed only in destructors
+	'naked' pointers are allowed only as return type (and mean that the caller must receive ownership on a returned object)
+	use C++ vectors for reading/writing buffers. Ex: &vector.front()
+	use stringstreams instead of sprintf. Ex: stream << setwidth(5) << int
+	pointers should be always wrapped in unique_ptr
+- place #define only in cpp files
+- always overload both == and !=, not only one of them
+- use 'class' keyword in template definitions
+- use 'struct' keyword for POD and standard-layout classes (and only for them)
+- use 'auto' keyword cautionously (recommended only for 'for', 'reinterpret_cast' and smart pointers initializations)
+- 'Globals global' should be the only global variable
+- public members of Globals class must not have any public members (we use friends feature to define have access to them)
+- forward declare structs as 'struct' and classes as 'class', do NOT mix them
+- return values of modifying functions from <algorithm> should be 'assert'ed against end() of an output container when possible
+
+To be done Guidelines ===================================
+- all exceptions to this rules should be commented like this: // INTENDED: <some explanation>
+- all debug constructs should have word 'debug' in them (it is allowed to have it only in comments)
+- use "const std::string&" for string arguments when possible
+- Functions in the following list are too low level and therefore dangerous. They should be wrapped in utility function/methods
+	with neccessary checks. This functions are:
+	-- reinterpret_cast<>
+	-- memcopy
+	-- memmove
+	-- memset
+	-- any platform-specific functions
+- Do not use cin/cout/cerr directly, use appropriate functions from utility.h
+- do not use const_cast<>
+- be aware of C++11 features supported in MSVC11 and do use them
+- use functions from <algorithm> when possible
+- Names should be as follows:
+	ClassNames - class names, struct names, and typedefs
+	variable_name - variables
+	makeClassMethod - class methods (including "properties"), should start with a verb
+	doClassMethod - private and protected non-static class methods should start with 'do'
+	private_member_ - private and protected data members
+- Use 'const' specifier for methods when possible (including const iterators)
+- Use string::empty() to check if string is empty, not string::size()
+- Loops that use several iterators should always check them, probably using assert(iter != end) in the loop body and assert(iter == end) immediately after the loop
+
+Test cases ==============================================
+
+darkdoom
+- PLAYPAL | COLORMAP (BMP)
+- DEHACKED (CSV)
+(for truedoom: higher demons (like masterminds) control lesser demons (like imps)
+
+bit
+/* funny friendly monster
+	- regeneration in wound states with "disc of repulsion" impulse
+	- "emergency /temporal/ shift" - teleportation to replace with another bit (if present on a current map)
+	- reflective force shield
+	- freezing attack
+	- sometimes forgets its targets (like flaming skulls)
+	- flashlight
+	- funny comments with electronic voice
+*/
+- sprites (BMP)
+- 3d model (MD2)
+- DECORATE (TXT)
+- sounds
+
+Tutorials ===============================================
+- how to make test cases wads with WarStudio and other free tools

@@ -19,11 +19,10 @@
 
 */
 
-#include "stdafx.h"
+#include "../stdafx.h"
 
 #include "Globals.h"
-
-#include <Magick++.h>
+#include "../magick.h"
 
 namespace warstudio {
 	namespace model {

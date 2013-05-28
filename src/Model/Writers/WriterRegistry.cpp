@@ -19,7 +19,7 @@
 
 */
 
-#include "stdafx.h"
+#include "../../stdafx.h"
 
 #include "WriterRegistry.h"
 
@@ -35,10 +35,10 @@ bool operator< (const WriterId &left, const WriterId &right)
 	return (left.id < right.id);
 }
 
-void WriterRegistry::doInit(Registry& registry) const
+void WriterRegistry::doInit() const
 {
-	add(registry, WriterId(SPACE_WARSTUDIO, BUILTIN_WRITER::RAW), new RawWriter());
-	add(registry, WriterId(SPACE_WARSTUDIO, BUILTIN_WRITER::IMAGE), new ImageWriter());
+    add(WriterId(SPACE_WARSTUDIO, BUILTIN_WRITER::RAW), new RawWriter());
+    add(WriterId(SPACE_WARSTUDIO, BUILTIN_WRITER::IMAGE), new ImageWriter());
 }
 
 	}

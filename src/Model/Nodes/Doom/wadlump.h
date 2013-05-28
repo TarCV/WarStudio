@@ -22,13 +22,12 @@
 #pragma once
 
 #include "../BaseNode.h"
+#include "../../../StreamBuffer.h"
 
 #include <iosfwd>
 #include <memory>
 
 namespace warstudio {
-
-	class StreamBuffer;
 
 	namespace model {
 		namespace doom {

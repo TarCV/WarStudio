@@ -25,7 +25,7 @@
 #include <assert.h>
 
 #include "../RegistryTemplate.h"
-#include "basewriter.h"
+#include "BaseWriter.h"
 #include "../constants.h"	//for SPACE_WARSTUDIO
 
 namespace warstudio {
@@ -48,9 +48,10 @@ bool operator< (const WriterId &left, const WriterId &right);	//defined in basew
 class WriterRegistry : public RegistryTemplate<WriterId, BaseWriter>
 {
 	friend class Globals;
-	friend class DefaultConverters;
+    friend class ChainRegistry;
+    friend class AdapterChain;
 protected:
-	void doInit(Registry& registry) const override;
+    void doInit() const override;
 };
 
 	}

@@ -24,6 +24,8 @@
 #include "id.h"
 #include "../constants.h"
 
+#include <assert.h>
+
 namespace warstudio {
 	namespace model {
 
@@ -41,9 +43,9 @@ bool operator< (const ContainerType& left, const ContainerType& right);
 
 class BaseContainer {
 public:
-	ContainerType Type() const {return type_();}
+	ContainerType getType() const {return type_();}
 
-	virtual ~BaseContainer() {};
+    virtual ~BaseContainer() {}
 
 protected:
 	BaseContainer() {}

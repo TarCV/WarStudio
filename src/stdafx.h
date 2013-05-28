@@ -19,15 +19,27 @@
 
 */
 
+/*
+TODO: disabled until development is finished
+
 #pragma message("Precompiling headers.\n")
 
-#include <Magick++.h>
+#include "magick.h"
 
 #include <boost/ptr_container/ptr_vector.hpp>
 #include <boost/ptr_container/ptr_map.hpp>
 #include <vector>
 
-#include <filesystem>
+#ifdef linux
+
+#define BOOST_FILESYSTEM_VERSION 2
+#include <boost/filesystem.hpp>
+
+#else
+
+//#include <filesystem>
+
+#endif
 
 #include <fstream>
 #include <sstream>
@@ -41,3 +53,4 @@
 #include <typeinfo>
 
 #include <algorithm>
+*/

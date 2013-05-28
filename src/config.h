@@ -21,6 +21,8 @@
 
 #pragma once
 
+#include <stddef.h>
+
 namespace warstudio {
 	//used in WindowStream and Utility.cpp::StreamCopy
 	const size_t	WINDOWSTREAM_BUFFER_SIZE = 1024;

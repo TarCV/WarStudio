@@ -19,7 +19,7 @@
 
 */
 
-#include "stdafx.h"
+#include "../../stdafx.h"
 
 #include "ConverterRegistry.h"
 
@@ -35,10 +35,10 @@ bool operator< (const ConverterId &left, const ConverterId &right)
 		return (left.id < right.id);
 }
 
-void ConverterRegistry::doInit(Registry& registry) const
+void ConverterRegistry::doInit() const
 {
-	add(registry, ConverterId(SPACE_WARSTUDIO, CONVERTER_TYPE::PALETTE_TO_IMAGE), new PalToImgConverter());
-	add(registry, ConverterId(SPACE_WARSTUDIO, CONVERTER_TYPE::COLORMAP_TO_IMAGE), new ColormapToImgConverter());
+    add(ConverterId(SPACE_WARSTUDIO, CONVERTER_TYPE::PALETTE_TO_IMAGE), new PalToImgConverter());
+    add(ConverterId(SPACE_WARSTUDIO, CONVERTER_TYPE::COLORMAP_TO_IMAGE), new ColormapToImgConverter());
 }
 
 	}

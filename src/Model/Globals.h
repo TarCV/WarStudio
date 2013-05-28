@@ -26,6 +26,7 @@
 #include "Archivers/ArchiverRegistry.h"
 #include "Converters/ConverterRegistry.h"
 #include "Writers/WriterRegistry.h"
+#include "ChainRegistry.h"
 
 namespace warstudio {
 	namespace model {
@@ -36,6 +37,7 @@ public:
 	const ArchiverRegistry	archivers;
     const ConverterRegistry	converters;
 	const WriterRegistry	writers;
+    const ChainRegistry     adapterchains;
 
 	Globals() {}
 };

@@ -23,7 +23,7 @@
 
 #include <stdint.h>
 #include <assert.h>
-#include "basearchiver.h"
+#include "BaseArchiver.h"
 #include "../RegistryTemplate.h"
 
 #include "../constants.h"	//for SPACE_WARSTUDIO
@@ -53,11 +53,12 @@ bool operator< (const ArchiverId &left, const ArchiverId &right);
 
 class ArchiverRegistry : public RegistryTemplate<ArchiverId, BaseArchiver>
 {
-	friend class Globals;
-	friend class DefaultConverters;
-	friend class doom::wad;	//used in palette update routines
+    friend class Globals;
+    friend class ChainRegistry;
+    friend class doom::wad;	//used in palette update routines
+    friend class AdapterChain;
 protected:
-	void doInit(Registry& registry) const override;
+    void doInit() const override;
 };
 
 	}

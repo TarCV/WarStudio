@@ -38,8 +38,8 @@ protected:
 	virtual ContainerType doGetFileContainerType() const = 0;
 	virtual void doCookContext(Context &) const {/* most adapters do not change context */}
 public:
-	const BaseContainer* Extract(const BaseContainer& in) const;
-	const BaseContainer* Archive(const BaseContainer& in, const Context& context) const;
+	const BaseContainer* extract(const BaseContainer& in) const;
+	const BaseContainer* archive(const BaseContainer& in, const Context& context) const;
 
 	ContainerType getArchiveContainerType() const {return doGetArchiveContainerType();}
 	ContainerType getFileContainerType() const {return doGetFileContainerType();}

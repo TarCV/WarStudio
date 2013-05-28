@@ -19,7 +19,7 @@
 
 */
 
-#include "stdafx.h"
+#include "../../stdafx.h"
 
 #include "Raw.h"
 #include "../Containers/StreamBufferContainer.h"

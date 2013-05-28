@@ -47,10 +47,11 @@ bool operator< (const ConverterId &left, const ConverterId &right);	//defined in
 
 class ConverterRegistry : public RegistryTemplate<ConverterId, BaseConverter>
 {
-	friend class Globals;
-	friend class DefaultConverters;
+    friend class Globals;
+    friend class ChainRegistry;
+    friend class AdapterChain;
 protected:
-	void doInit(Registry& registry) const override;
+    void doInit() const override;
 };
 
 	}

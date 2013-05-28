@@ -21,7 +21,7 @@
 
 #pragma once
 
-#include "../basearchiver.h"
+#include "../BaseArchiver.h"
 
 namespace warstudio {
 	namespace model {

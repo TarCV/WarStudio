@@ -27,6 +27,7 @@
 
 #include <algorithm>
 #include <assert.h>
+#include <cstring>
 
 namespace warstudio {
 
@@ -64,9 +65,9 @@ void iwindowbuf::finish_operations() {
 }
 
 iwindowbuf::iwindowbuf() : 
-	initedops_(false),
 	source_(0), 
-	readpos_base_(0) 
+    readpos_base_(0),
+    initedops_(false)
 {}
 
 

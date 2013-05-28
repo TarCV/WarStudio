@@ -36,7 +36,7 @@ protected:
 	virtual bool parentfilter() const throw();
 	DirectoryNode* directory;		//TODO: used to represent the file (e.g. a wad file) this lump contained in (this may be the same or not as package field)
 public:
-	BaseNode(std::string named, DirectoryNode* withindir, BaseNode* withparent) : name_(named), directory(withindir), parent_(withparent) {}
+    BaseNode(std::string named, DirectoryNode* withindir, BaseNode* withparent) : parent_(withparent), name_(named), directory(withindir) {}
 	virtual LUMP_TYPE type() const = 0;
 	virtual int size() const = 0;
 

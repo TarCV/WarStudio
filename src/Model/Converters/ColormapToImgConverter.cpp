@@ -19,7 +19,7 @@
 
 */
 
-#include "stdafx.h"
+#include "../../stdafx.h"
 
 #include "ColormapToImgConverter.h"
 #include "../Containers/ColormapContainer.h"

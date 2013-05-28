@@ -19,11 +19,11 @@
 
 */
 
-#include "stdafx.h"
+#include "../../stdafx.h"
 
-#include "baseconverter.h"
+#include "BaseConverter.h"
 
-#include "../Containers/basecontainer.h"
+#include "../Containers/BaseContainer.h"
 
 #include <assert.h>
 
@@ -32,18 +32,18 @@ using namespace std;
 namespace warstudio {
 	namespace model {
 
-const BaseContainer* BaseConverter::Extract(const BaseContainer& in) const
+const BaseContainer* BaseConverter::extract(const BaseContainer& in) const
 {
-	assert(in.Type() == getArchiveContainerType());
+    assert(in.getType() == getArchiveContainerType());
 	auto ret = unique_ptr<const BaseContainer>(doExtract(in));
-	assert(ret->Type() == getFileContainerType());
+    assert(ret->getType() == getFileContainerType());
 	return ret.release();
 }
-const BaseContainer* BaseConverter::Archive(const BaseContainer& in, const Context& context) const
+const BaseContainer* BaseConverter::archive(const BaseContainer& in, const Context& context) const
 {
-	assert(in.Type() == getFileContainerType());
+    assert(in.getType() == getFileContainerType());
 	auto ret = unique_ptr<const BaseContainer>(doArchive(in, context));
-	assert(ret->Type() == getArchiveContainerType());
+    assert(ret->getType() == getArchiveContainerType());
 	return ret.release();
 }
 

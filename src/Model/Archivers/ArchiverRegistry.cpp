@@ -19,7 +19,7 @@
 
 */
 
-#include "stdafx.h"
+#include "../../stdafx.h"
 
 #include "ArchiverRegistry.h"
 
@@ -38,13 +38,13 @@ bool operator< (const ArchiverId &left, const ArchiverId &right)
 	return (left.id < right.id);
 }
 
-void ArchiverRegistry::doInit(Registry& registry) const
+void ArchiverRegistry::doInit() const
 {
-	add(registry, ArchiverId(SPACE_WARSTUDIO, BUILTIN_ARCHIVER::DUMMY), new DummyArchiver());
-	add(registry, ArchiverId(SPACE_WARSTUDIO, BUILTIN_ARCHIVER::DOOM_PLAYPAL), new doom::PlaypalArchiver(256, 14));
-	add(registry, ArchiverId(SPACE_WARSTUDIO, BUILTIN_ARCHIVER::DOOM_COLORMAP), new doom::ColormapArchiver(256, 34, "PLAYPAL"));
-	add(registry, ArchiverId(SPACE_WARSTUDIO, BUILTIN_ARCHIVER::DOOM_PATCH), new doom::PatchArchiver());
-	add(registry, ArchiverId(SPACE_WARSTUDIO, BUILTIN_ARCHIVER::DOOM_FLAT), new doom::FlatArchiver());
+    add(ArchiverId(SPACE_WARSTUDIO, BUILTIN_ARCHIVER::DUMMY), new DummyArchiver());
+    add(ArchiverId(SPACE_WARSTUDIO, BUILTIN_ARCHIVER::DOOM_PLAYPAL), new doom::PlaypalArchiver(256, 14));
+    add(ArchiverId(SPACE_WARSTUDIO, BUILTIN_ARCHIVER::DOOM_COLORMAP), new doom::ColormapArchiver(256, 34, "PLAYPAL"));
+    add(ArchiverId(SPACE_WARSTUDIO, BUILTIN_ARCHIVER::DOOM_PATCH), new doom::PatchArchiver());
+    add(ArchiverId(SPACE_WARSTUDIO, BUILTIN_ARCHIVER::DOOM_FLAT), new doom::FlatArchiver());
 }
 
 	}

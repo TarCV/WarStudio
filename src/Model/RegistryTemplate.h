@@ -41,6 +41,8 @@ private:	//to be used only by RegistryTemplate. Intentionally private
 private: //to be used only by RegistryTemplate itself and not by its derived classes. Intentionally private
 	bool isKnown(ID id) const {return (registry_.count(id) > 0);}
 	const T& get(ID id) const {return registry_.at(id);}
+    void add(ID id, T* value) {registry_.insert(id, value);}
+    bool empty() const {return registry_.empty();}
 
 	ProtectedRegistryTemplate() {}
 private:
@@ -51,24 +53,24 @@ template <class ID, class T>
 class RegistryTemplate
 {
 protected:	//to be used only by friends of derived classes. Intentionally protected
-	bool isKnown(ID id) const {initialize(registry_.registry_); return registry_.isKnown(id);}
-	const T& get(ID id) const {initialize(registry_.registry_); return registry_.get(id);}
+    bool isKnown(ID id) const {initialize(); return registry_.isKnown(id);}
+    const T& get(ID id) const {initialize(); return registry_.get(id);}
 
 protected:	//to be used only by derived classes. Intentionally protected
 	typedef typename ProtectedRegistryTemplate<ID, T>::Map		Registry;
 
-	virtual void doInit(Registry& registry) const = 0;	//meant to be overriden in derived classes
+    virtual void doInit() const = 0;	//meant to be overriden in derived classes
 
-	static void add(Registry& registry, ID id, T* value)	{registry.insert(id, value);}
 
+    void add(ID id, T* value) const	{registry_.add(id, value);}
 	RegistryTemplate() {}
 	virtual ~RegistryTemplate() {}
 
 private:	//not to be used by anyone else
-	void initialize(Registry& registry) const
+    void initialize() const
 	{
-		if (!registry.empty())	return;
-		doInit(registry);
+        if (!registry_.empty())	return;
+        doInit();
 	}
 
 	/*

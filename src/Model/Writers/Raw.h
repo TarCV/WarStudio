@@ -21,7 +21,7 @@
 
 #pragma once
 
-#include "basewriter.h"
+#include "BaseWriter.h"
 
 namespace warstudio {
 	namespace model {

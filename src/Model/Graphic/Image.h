@@ -28,7 +28,7 @@
 #include <vector>
 #include <map>
 
-#include <Magick++.h>
+#include "../../magick.h"
 
 namespace warstudio {
 	namespace model {
@@ -66,7 +66,7 @@ protected:
 
 private:
 	//delete
-	ConstImageWindowTemplate(const ConstImageWindowTemplate<T> &);
+    ConstImageWindowTemplate(const ConstImageWindowTemplate<T> &);
 	const ConstImageWindowTemplate<T>& operator=(const ConstImageWindowTemplate<T> &) const;
 };
 
@@ -74,30 +74,36 @@ template<class T>
 	class ImageWindowTemplate : ConstImageWindowTemplate<T>
 {
 public:
-	Pixels& pixels() {return buffer_;}
+    typename ConstImageWindowTemplate<T>::Pixels& pixels() {return this->buffer_;}
 
-	void flush() {image_.setWindow(*this);}
+    void flush();
 
-	ImageWindowTemplate(const ImageWindowTemplate<T> &&r) : window_(std::move(r.window_)), buffer_(std::move(r.buffer_)), image_(r.image_) {}
+    ImageWindowTemplate(const ImageWindowTemplate<T> &&r);
 
 	~ImageWindowTemplate() override {flush();}
 
 private:
 	friend class Image;
-	ImageWindowTemplate(const Rect& window, Pixels&& buffer, Image& image) : ConstImageWindowTemplate(window, std::move(buffer)), image_(image) {}
+    ImageWindowTemplate(const Rect& window, typename ConstImageWindowTemplate<T>::Pixels&& buffer, Image& image);
 
 private:
-	Image&	image_;
+    Image&	image_;
 };
 
 //class ImagePixel;
 class Image
 {
 public:
-	typedef ConstImageWindowTemplate<size_t> ConstIndexWindow;
-	typedef ImageWindowTemplate<size_t> IndexWindow;
-	typedef ConstImageWindowTemplate<Color>	ConstWindow;
-	typedef ImageWindowTemplate<Color> Window;
+    typedef ConstImageWindowTemplate<size_t> ConstIndexWindow;
+
+    typedef ConstImageWindowTemplate<Color>	ConstWindow;
+
+    //typedefs can't be used in friend class in GNU C++
+    typedef ImageWindowTemplate<size_t> IndexWindow;
+    friend class ImageWindowTemplate<size_t>;
+
+    typedef ImageWindowTemplate<Color> Window;
+    friend class ImageWindowTemplate<Color>;
 
 	Image(size_t width, size_t height, Color bgcolor = Color(0, 0, 0, 0), const Palette* palette = nullptr);
 	Image(std::string file);
@@ -137,9 +143,7 @@ private:
 /*	friend class ImagePixel;
 	Color getColor(const ImagePixel&) const;
 	void setColor(ImagePixel&, const Color& );*/
-	friend class IndexWindow;
-	friend class Window;
-	void setWindow(const IndexWindow& buffer);
+    void setWindow(const IndexWindow& buffer);
 	void setWindow(const Window& buffer);
 	IndexWindow::Pixels createIndexBufferFromRect(const Rect& window) const;
 	Window::Pixels createBufferFromRect(const Rect& window) const;
@@ -169,16 +173,13 @@ private:
 		FormatInfo(size_t palette_max_, TRANSPARENCY_TYPE transparency_support_) : palette_max(palette_max_), transparency_support(transparency_support_) {}
 	};
 	typedef std::map<std::string, FormatInfo> FormatMap;
-	static FormatMap format_info_;
 
 	Magick::Image image_;
-
 	bool    is_bgcolor_appended_;	//true if bgcolor was automatically appended to the palette
+    signed int	anchor_x_, anchor_y_;
 
-	static const size_t MARKER_WIDTH = 5;
-	static_assert(MARKER_WIDTH % 2 == 1, "MARKER_WIDTH must have an odd value");
-
-	signed int	anchor_x_, anchor_y_;
+    static FormatMap format_info_;
+    static const size_t MARKER_WIDTH;
 };
 
 /*class ImagePixel

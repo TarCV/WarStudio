@@ -1,45 +1,1 @@
-/*
-
-	Copyright 2012 Constantin Tarc <whitetrakon@gmail.com>
-
-	This file is part of WadDirectory.
-
-    WadDirectory is free software: you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
-
-    WadDirectory is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
-
-    You should have received a copy of the GNU General Public License
-    along with WadDirectory.  If not, see <http://www.gnu.org/licenses/>.
-
-*/
-
-#include "stdafx.h"
-
-#include "BaseContainer.h"
-
-namespace warstudio {
-	namespace model {
-
-bool operator==(const ContainerType& left, const ContainerType& right)
-{
-	return (left.space == right.space && left.type == right.type);
-}
-bool operator!=(const ContainerType& left, const ContainerType& right)
-{
-	return !(left == right);
-}
-
-bool operator< (const ContainerType& left, const ContainerType& right)
-{
-	if (left.space != right.space)	return (left.space < right.space);
-	return (left.type < right.type);
-}
-
-	}
-}
+⼪ഊഊृ潰祲楧桴′〱㈠䍯湳瑡湴楮⁔慲挠㱷桩瑥瑲慫潮䁧浡楬⹣潭㸍਍ਉ周楳⁦楬攠楳⁰慲琠潦⁗慤䑩牥捴潲礮ഊഊ††坡摄楲散瑯特⁩猠晲敥⁳潦瑷慲攺⁹潵⁣慮⁲敤楳瑲楢畴攠楴⁡湤⽯爠浯摩晹ഊ††楴⁵湤敲⁴桥⁴敲浳⁯映瑨攠䝎唠䝥湥牡氠偵扬楣⁌楣敮獥⁡猠灵扬楳桥搠批ഊ††瑨攠䙲敥⁓潦瑷慲攠䙯畮摡瑩潮Ⱐ敩瑨敲⁶敲獩潮″⁯映瑨攠䱩捥湳攬⁯爍ਠ† 慴⁹潵爠潰瑩潮⤠慮礠污瑥爠癥牳楯渮ഊഊ††坡摄楲散瑯特⁩猠摩獴物扵瑥搠楮⁴桥⁨潰攠瑨慴⁩琠睩汬⁢攠畳敦畬Ⰽਠ†⁢畴⁗䥔䡏啔⁁乙⁗䅒剁乔夻⁷楴桯畴⁥癥渠瑨攠業灬楥搠睡牲慮瑹⁯昍ਠ†⁍䕒䍈䅎呁䉉䱉呙⁯爠䙉呎䕓匠䙏删䄠偁剔䥃啌䅒⁐啒偏卅⸠⁓敥⁴桥ഊ††䝎唠䝥湥牡氠偵扬楣⁌楣敮獥⁦潲⁭潲攠摥瑡楬献ഊഊ††奯甠獨潵汤⁨慶攠牥捥楶敤⁡⁣潰礠潦⁴桥⁇乕⁇敮敲慬⁐畢汩挠䱩捥湳攍ਠ†⁡汯湧⁷楴栠坡摄楲散瑯特⸠⁉映湯琬⁳敥‼桴瑰㨯⽷睷⹧湵⹯牧⽬楣敮獥猯㸮ഊഊ⨯ഊഊ⍩湣汵摥•⸮⼮ⸯ獴摡晸⹨∍਍ਣ楮捬畤攠≂慳敃潮瑡楮敲⹨∍਍੮慭敳灡捥⁷慲獴畤楯⁻ഊ८慭敳灡捥⁭潤敬⁻ഊഊ扯潬⁯灥牡瑯爽㴨捯湳琠䍯湴慩湥牔祰攦⁬敦琬⁣潮獴⁃潮瑡楮敲呹灥☠物杨琩ഊ笍ਉ牥瑵牮 汥晴⹳灡捥‽㴠物杨琮獰慣攠☦⁬敦琮瑹灥‽㴠物杨琮瑹灥⤻ഊ納੢潯氠潰敲慴潲ℽ⡣潮獴⁃潮瑡楮敲呹灥☠汥晴Ⱐ捯湳琠䍯湴慩湥牔祰攦⁲楧桴⤍੻ഊॲ整畲渠ℨ汥晴‽㴠物杨琩㬍੽ഊഊ扯潬⁯灥牡瑯爼 捯湳琠䍯湴慩湥牔祰攦⁬敦琬⁣潮獴⁃潮瑡楮敲呹灥☠物杨琩ഊ笍ਉ楦 汥晴⹳灡捥‡㴠物杨琮獰慣攩ॲ整畲渠⡬敦琮獰慣攠㰠物杨琮獰慣攩㬍ਉ牥瑵牮 汥晴⹴祰攠㰠物杨琮瑹灥⤻ഊ納਍ਉ納੽ഊ

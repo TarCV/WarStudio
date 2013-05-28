@@ -21,7 +21,7 @@
 
 #pragma once
 
-#include <Magick++.h>
+#include "../../magick.h"
 
 #include <stdint.h>
 

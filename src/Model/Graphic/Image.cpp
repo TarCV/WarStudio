@@ -20,24 +20,25 @@
 
 */
 
-#include "stdafx.h"
+#include "../../stdafx.h"
 
 #include "Image.h"
 
 #include "../../utility.h"
+#include "../../filesystem.h"
 
 #include <boost/algorithm/string/case_conv.hpp>
 #include <assert.h>
 #include <algorithm>
-#include <filesystem>
+#include <climits>
 
 using namespace std;
-using namespace std::tr2;
 
 namespace warstudio {
 	namespace model {
 
 Image::FormatMap Image::format_info_;
+const size_t Image::MARKER_WIDTH = 5;
 
 void Image::initFormatData()
 {
@@ -53,6 +54,8 @@ Image::Image(size_t width, size_t height, Color bgcolor, const Palette* palette)
 	anchor_y_(0),
 	is_bgcolor_appended_(false)
 {
+    static_assert(Image::MARKER_WIDTH % 2 == 1, "MARKER_WIDTH must be odd");
+
     image_.backgroundColor(bgcolor.getNativeColor_());
 	if (nullptr == palette)
 	{
@@ -75,7 +78,8 @@ Image::Image(string file) :
 	anchor_y_(0),
 	is_bgcolor_appended_(false)
 {
-	open(file);
+    static_assert(Image::MARKER_WIDTH % 2 == 1, "MARKER_WIDTH must be odd");
+    open(file);
 }
 
 Image::Image(const Image& image) :
@@ -84,6 +88,7 @@ Image::Image(const Image& image) :
 	anchor_y_(image.anchor_y_),
 	is_bgcolor_appended_(image.is_bgcolor_appended_)
 {
+    static_assert(Image::MARKER_WIDTH % 2 == 1, "MARKER_WIDTH must be odd");
 }
 
 void Image::open(string file)
@@ -161,7 +166,7 @@ void Image::emulateTransparency(Image& copy, Image& mask)
 		}
 		assert(copy_it == window_pixels.end());
 
-		palette.erase(--palette.cend());	//todo: consider if it really should be done always as there are removeBgColor method
+        palette.pop_back();
 
 		for_each(palette.begin(), palette.end(), [](Color &color) { color.setA(0xff); });
 
@@ -269,17 +274,17 @@ Rect Image::getRectForAnchor() const
 			bool inside_picture = (0 <= anchor && anchor < out_size);
 			if (anchor < 0)
 			{
-				out_offset = max<size_t>(MARKER_WIDTH, -anchor);	//size will be automatically changed later
+                out_offset = max<size_t>(Image::MARKER_WIDTH, -anchor);	//size will be automatically changed later
 
 			} else if (other_inside)
 			{
-				out_size = max<size_t>(out_size + MARKER_WIDTH, anchor + 1);
+                out_size = max<size_t>(out_size + Image::MARKER_WIDTH, anchor + 1);
 			}
 		};
 		helper(anchor_x_, is_y_inside_picture, ret.offset_X, ret.width);
 		helper(anchor_y_, is_x_inside_picture, ret.offset_Y, ret.height);
 	}
-	else	//(2): is exactly in the corner and is always outside of the image, so we never need to add MARKER_WIDTH!
+    else	//(2): is exactly in the corner and is always outside of the image, so we never need to add Image::MARKER_WIDTH!
 	{
 		auto helper = [](signed int anchor, size_t &out_offset, size_t &out_size) {
 			if (anchor < 0)
@@ -298,8 +303,8 @@ Rect Image::getRectForAnchor() const
 	if (ret.offset_X > 0)	ret.width += ret.offset_X;
 	if (ret.offset_Y > 0)	ret.height += ret.offset_Y;
 
-	ret.width = max(ret.width, MARKER_WIDTH);
-	ret.height = max(ret.height, MARKER_WIDTH);
+    ret.width = max(ret.width, Image::MARKER_WIDTH);
+    ret.height = max(ret.height, Image::MARKER_WIDTH);
 
 	return ret;
 }
@@ -330,8 +335,8 @@ void Image::save(std::string file) const
 	//todo: support anchor offsets
 	
 	initFormatData();
-	const sys::path path(file);
-	const string extension = boost::to_lower_copy(path.extension());
+    const path filepath(file);
+    const string extension = boost::to_lower_copy(filepath.extension());
 	if (format_info_.count(extension) == 0)
 	{
 		error("Writing in the specified image format is not supported");
@@ -383,8 +388,8 @@ void Image::save(std::string file) const
 
 			emulateTransparency(*copy, mask);
 
-			sys::path mask_path(path.branch_path());
-			mask_path /= path.basename() + "__mask" + extension;
+            path mask_path(filepath.branch_path());
+            mask_path /= filepath.stem() + "__mask" + extension;
 			mask.image_.write(mask_path.file_string());
 		}
 	}
@@ -415,16 +420,16 @@ void Image::save(std::string file) const
 				return 0;
 			} else if (MarkerSection::AFTER == section || MarkerSection::IN == other_section)
 			{
-				return (size - MARKER_WIDTH);
+                return (size - Image::MARKER_WIDTH);
 			} else
 			{
-				int ret = other_offset - MARKER_WIDTH/2;
+                int ret = other_offset - Image::MARKER_WIDTH/2;
 				if (ret < 0)	ret = 0;
 				return ret;
 			}
 		};
-		Rect h_marker(0, copy_dimensions.offset_Y + anchor_y_, MARKER_WIDTH, 1);
-		Rect v_marker(copy_dimensions.offset_X + anchor_x_, 0, 1, MARKER_WIDTH);
+        Rect h_marker(0, copy_dimensions.offset_Y + anchor_y_, Image::MARKER_WIDTH, 1);
+        Rect v_marker(copy_dimensions.offset_X + anchor_x_, 0, 1, Image::MARKER_WIDTH);
 		h_marker.offset_X = getMarkerOffset(x_section, copy_dimensions.width,  y_section, v_marker.offset_X);
 		v_marker.offset_Y = getMarkerOffset(y_section, copy_dimensions.height, x_section, h_marker.offset_Y);
 
@@ -671,8 +676,22 @@ void Image::setWindow(const Window& buffer)
 		   [] (const Color& color) { return color.getNativeColor_(); })
 		   == colors + window.width * window.height);
 
-	image_.syncPixels();
+image_.syncPixels();
 }
+
+template <class T> void ImageWindowTemplate<T>::flush()
+{
+    image_.setWindow(*this);
+}
+
+/*template <class T> ImageWindowTemplate<T>::ImageWindowTemplate(const ImageWindowTemplate<T> &&r)
+    : ConstImageWindowTemplate<T>(r.window_, r.buffer_), image_(r.image_)
+{}*/
+
+template <class T> ImageWindowTemplate<T>::ImageWindowTemplate(const Rect& window, typename ConstImageWindowTemplate<T>::Pixels&& buffer, Image& image)
+    : ConstImageWindowTemplate<T>(window, std::move(buffer)), image_(image)
+{}
+
 
 	}
 }

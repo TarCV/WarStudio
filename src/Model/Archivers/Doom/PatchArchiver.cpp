@@ -19,7 +19,7 @@
 
 */
 
-#include "stdafx.h"
+#include "../../../stdafx.h"
 
 #include "PatchArchiver.h"
 
@@ -82,7 +82,7 @@ const BaseContainer *PatchArchiver::doExtract(const InputLumpData& in) const
 				warning("Actual height of the patch is greater than the one stated in the patch header.");
 				height = post_start + post_height;
 			}
-			in.stream.seekg(post_height + 2, SEEK_CUR);
+            in.stream.seekg(post_height + 2, ios_base::cur);
 		}
 	}
 
