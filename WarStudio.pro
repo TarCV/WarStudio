@@ -16,8 +16,13 @@ LIBS +=\
     /usr/lib/libboost_system.so.1.48.0 \
     /usr/lib/libboost_filesystem.so.1.48.0 \
     /usr/lib/libMagick++.so.4
+
+
 PRECOMPILED_HEADER = stdafx.h
 QMAKE_CXXFLAGS += -std=c++11
+
+#TODO: for debug only:
+QMAKE_CXXFLAGS += -gdwarf-2
 
 SOURCES +=\
     src/windowstream.cpp \
