@@ -38,9 +38,9 @@ namespace warstudio {
 wadlump::wadlump(wad& root, BaseNode* parent, string name, int offset, int size) :
 	BaseNode(name, &root, parent), 
 	offset(offset), 
-	size_(size), 
 	type_(LUMP_TYPE::UNKNOWN), 
-	buffer_(nullptr)
+    size_(size),
+    buffer_(nullptr)
 {
 	assert(sizeof(int) >= sizeof(uint32_t));	//size() returns int, but underlying size_ is uint32_t
 	assert(offset == 0 || offset >= 12);
@@ -71,12 +71,11 @@ void wadlump::Stored()
 {
 	buffer_.reset();	//data from the buffer is now stored in the directory, we can now free memory
 }
-int wadlump::size() const
+size_t wadlump::size() const
 {
 	if (buffer_) {
 		int ret = buffer_->size();
-		if (-1 == ret)	return size_;
-		return ret;
+        if (-1 != ret)return ret;
 	}
 	return size_;
 }

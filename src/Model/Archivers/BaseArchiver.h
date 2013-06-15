@@ -53,7 +53,7 @@ class BaseArchiver {
 public:
 	typedef	std::vector<std::string> PaletteDependencyList;
 	
-	const BaseContainer *extract(const InputLumpData& in) const;
+    std::unique_ptr<const BaseContainer> extract(const InputLumpData& in) const;
 	void archive(const BaseContainer& in, const Context& context, OutputLumpData& out) const;
 	int estimateSize(const BaseContainer& in) const {return doEstimateSize(in);}
 
@@ -64,7 +64,7 @@ public:
 	virtual ~BaseArchiver() {}
 
 protected:
-	virtual const BaseContainer *doExtract(const InputLumpData& in) const = 0;
+    virtual std::unique_ptr<const BaseContainer> doExtract(const InputLumpData& in) const = 0;
 	virtual void doArchive(const BaseContainer& in, const Context& context, OutputLumpData& out) const = 0;
 	virtual int doEstimateSize(const BaseContainer& in) const = 0;
 

@@ -51,7 +51,7 @@ public:
 
 	std::istream& ReadableData() const override {error("Wads are not convertible yet"); throw false; /* workaround to not write 'return' */};	//todo:
 	std::ostream& WritableData(int) override {error("Wads are not convertible yet"); throw false;};	//todo:
-	int size() const override {error("Wads are not convertible yet"); throw false;}	//todo:
+    size_t size() const override {error("Wads are not convertible yet"); throw false;}	//todo:
 	void Stored() override {error("Wads are not convertible yet"); throw false;}	//todo:
 
 private:

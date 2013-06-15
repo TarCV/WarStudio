@@ -54,7 +54,7 @@ protected:
 	void loadPalette(std::string name, const Palette& pal, const BaseNode* becauseof);
 
 private:
-	std::map<std::string, Palette> palettes_;
+    std::map<std::string, Palette> palettes_;
 };
 
 	}

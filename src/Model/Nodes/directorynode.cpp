@@ -42,7 +42,7 @@ void DirectoryNode::loadPalette(std::string name, const Palette &pal, const Base
 const Palette& DirectoryNode::getPalette(std::string name) const
 {
 	//todo: also load from IWADs etc.
-	return palettes_.at(name);
+    return palettes_.at(name);
 }
 
 	}

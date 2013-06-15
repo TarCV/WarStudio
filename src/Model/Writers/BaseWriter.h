@@ -45,13 +45,13 @@ struct Context;
 class BaseWriter {
 protected:
 	virtual void doWrite(const BaseContainer &in, OutputFileInfo outfile) const = 0;
-	virtual const BaseContainer* doRead(InputFileInfo infile, const Context& context) const = 0;
+    virtual std::unique_ptr<const BaseContainer> doRead(InputFileInfo infile, const Context& context) const = 0;
 
 	virtual ContainerType doGetContainerType() const = 0;
 	virtual void doCookContext(Context &) const {/* most adapters do not change context */}
 public:
 	void write(const BaseContainer &in, OutputFileInfo outfile) const;
-	const BaseContainer* read(InputFileInfo infile, const Context& context) const;
+    std::unique_ptr<const BaseContainer> read(InputFileInfo infile, const Context& context) const;
 
 	ContainerType getContainerType() const {return doGetContainerType();}
 	void cookContext(Context &context) const {doCookContext(context);}

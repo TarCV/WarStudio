@@ -25,6 +25,7 @@
 #include "AdapterChain.h"
 
 #include "Nodes/BaseNode.h"
+#include "Nodes/DirectoryNode.h"
 #include "Archivers/BaseArchiver.h"
 #include "Writers/BaseWriter.h"
 #include "../exceptions.h"
@@ -32,6 +33,7 @@
 #include "Globals.h"
 
 #include <algorithm>
+#include <utility>
 
 namespace warstudio {
 	namespace model {
@@ -55,31 +57,33 @@ AdapterChain::AdapterChain(const BaseArchiver* archiver, const ConverterList&& c
 
 void AdapterChain::extract(const BaseNode& node, std::string to_file) const
 {
-	unique_ptr<const BaseContainer> data(doExtractFromNode(node));
-	data.reset(doExtract(*data));
-	doExtractToFile(*data, to_file);
+    unique_ptr<const BaseContainer> data(doArchiverExtract(node));
+    data = std::move(doConverterExtract(*data));
+    doWriterExtract(*data, to_file);
 }
 
 void AdapterChain::extract(const BaseContainer& from_data, std::string to_file) const
 {
 	if (archiver_)	throw MethodNotApplicableException("an archiver is specified but not used");
 	
-	unique_ptr<const BaseContainer> data(doExtract(from_data));
-	doExtractToFile(*data, to_file);
+    unique_ptr<const BaseContainer> data(doConverterExtract(from_data));
+    doWriterExtract(*data, to_file);
 }
 
-const BaseContainer* AdapterChain::extract(const BaseNode& node) const
+std::unique_ptr<const BaseContainer> AdapterChain::extract(const BaseNode& node) const
 {
 	if (writer_)	throw MethodNotApplicableException("a writer is specified but not used");
 
-	return doExtractFromNode(node);
+    unique_ptr<const BaseContainer> data(doArchiverExtract(node));
+    return doConverterExtract(*data);
 }
 
-const BaseContainer* AdapterChain::extract(const BaseContainer& data) const
+std::unique_ptr<const BaseContainer> AdapterChain::extract(const BaseContainer& data) const
 {
-	if (writer_)	throw MethodNotApplicableException("a writer is specified but not used");
+    if (archiver_)	throw MethodNotApplicableException("an archiver is specified but not used");
+    if (writer_)	throw MethodNotApplicableException("a writer is specified but not used");
 
-    return doExtract(data);
+    return doConverterExtract(data);
 }
 
 string AdapterChain::getExtension() const
@@ -92,38 +96,6 @@ const BaseArchiver::PaletteDependencyList AdapterChain::getPaletteDependencies()
     return archiver_->getPaletteDependencies();
 }
 
-const BaseContainer* AdapterChain::doExtractFromNode(const BaseNode& from_node) const
-{
-	if (!archiver_)	throw MethodNotApplicableException("an archiver is needed but is not specified");
-
-	InputLumpData inex = {from_node.ReadableData(), from_node.size()};
-	return archiver_->extract(inex);
-}
-
-const BaseContainer* AdapterChain::doExtract(const BaseContainer& from_data) const
-{
-	if (converters_.empty())	throw MethodNotApplicableException("converters are needed but are not specified");
-
-	unique_ptr<const BaseContainer> data(&from_data);
-	
-	for (const auto& converter : converters_)
-	{
-        if (converter->getArchiveContainerType() != data->getType())	error("Adapters are incompatible");
-        data.reset(converter->extract(*data));
-	}
-
-	return data.release();
-}
-
-void AdapterChain::doExtractToFile(const BaseContainer& data, std::string to_file) const
-{
-	if (!writer_)	throw MethodNotApplicableException("a writer is needed but is not specified");
-
-	if (writer_->getContainerType() != data.getType())	error("Adapters are incompatible");
-	const OutputFileInfo outinfo = {to_file, file_extension_};
-    writer_->write(data, outinfo);
-}
-
 const AdapterChain::ConverterList AdapterChain::translateConverterids(const AdapterChain::ConverteridList &&ids)
 {
     ConverterList   ret;
@@ -133,6 +105,68 @@ const AdapterChain::ConverterList AdapterChain::translateConverterids(const Adap
         ret.push_back(&global.converters.get(id));
     }
     return ret;
+}
+
+unique_ptr<const BaseContainer> AdapterChain::doArchiverExtract(const BaseNode &from_node) const
+{
+    if (!archiver_)	throw MethodNotApplicableException("an archiver is needed but is not specified");
+
+    InputLumpData inex = {
+        from_node.ReadableData(),
+        from_node.size()
+        };
+
+    typedef decltype(inex.palettes) PaletteMap;
+    for (const auto dependency : archiver_->getPaletteDependencies())
+    {
+        inex.palettes.insert(PaletteMap::value_type(
+                                                            dependency,
+                                                            from_node.getDirectory()->getPalette(dependency)
+                                                      )
+                            );
+    }
+
+    return archiver_->extract(inex);
+}
+
+std::unique_ptr<const BaseContainer> AdapterChain::doConverterExtract(const BaseContainer &from_data) const
+{
+    if (converters_.empty()
+        && archiver_->getContainerType() != writer_->getContainerType()
+       )
+    {
+        throw MethodNotApplicableException("converters are needed but are not specified");
+    }
+
+    // first step is different
+    bool first = true;
+    unique_ptr<const BaseContainer> data;
+    for (const auto& converter : converters_)
+    {
+        if (first)
+        {
+            if (converter->getArchiveContainerType() != from_data.getType())	error("Adapters are incompatible");
+            data = std::move(converter->extract(from_data));
+
+            first = false;
+        }
+        else
+        {
+            if (converter->getArchiveContainerType() != data->getType())	error("Adapters are incompatible");
+            data = std::move(converter->extract(*data));
+        }
+    }
+
+    return data;
+}
+
+void AdapterChain::doWriterExtract(const BaseContainer &from_data, string to_file) const
+{
+    if (!writer_)	throw MethodNotApplicableException("a writer is needed but is not specified");
+
+    if (writer_->getContainerType() != from_data.getType())	error("Adapters are incompatible");
+    const OutputFileInfo outinfo = {to_file, file_extension_};
+    writer_->write(from_data, outinfo);
 }
 
 /*void AdapterChain::archive(std::string from_file, const BaseNode& to_node) const;

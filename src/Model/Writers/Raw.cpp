@@ -40,12 +40,12 @@ void RawWriter::doWrite(const BaseContainer &in, OutputFileInfo out) const
 	const StreamBuffer&	buffer = dynamic_cast<const StreamBufferContainer &>(in).buffer;
 	StreamCopy(buffer.ReadableData(), outdata);
 }
-const BaseContainer* RawWriter::doRead(InputFileInfo in, const Context& context) const
+unique_ptr<const BaseContainer> RawWriter::doRead(InputFileInfo in, const Context& context) const
 {
 	ifstream	indata(in.filepath);
 	unique_ptr<StreamBufferContainer> ret(new StreamBufferContainer(&indata, false, in.size));
 	StreamCopy(indata, ret->buffer.WritableData(in.size));
-	return ret.release();
+    return std::move(ret);
 }
 ContainerType RawWriter::doGetContainerType() const
 {

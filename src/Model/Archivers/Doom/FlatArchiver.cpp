@@ -34,7 +34,7 @@ namespace warstudio {
 	namespace model {
 		namespace doom {
 
-const BaseContainer *FlatArchiver::doExtract(const InputLumpData& in) const
+std::unique_ptr<const BaseContainer> FlatArchiver::doExtract(const InputLumpData& in) const
 {
 	size_t width(0), height(0);
 	unsigned char kresolution(1);
@@ -80,7 +80,7 @@ const BaseContainer *FlatArchiver::doExtract(const InputLumpData& in) const
 	{
 		index = readFromStream<unsigned char>(in.stream);
 	}
-	return ret.release();
+    return std::move(ret);
 }
 void FlatArchiver::doArchive(const BaseContainer& in, const Context& context, OutputLumpData& out) const
 {

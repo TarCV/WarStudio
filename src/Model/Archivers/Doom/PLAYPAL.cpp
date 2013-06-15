@@ -39,7 +39,7 @@ PlaypalArchiver::PlaypalArchiver(size_t colors_per_palette, size_t palette_num) 
 	palette_num_(palette_num)
 {
 }
-const BaseContainer *PlaypalArchiver::doExtract(const InputLumpData& in) const
+unique_ptr<const BaseContainer> PlaypalArchiver::doExtract(const InputLumpData& in) const
 {
 	assert(in.size % (colors_per_palette_*3) == 0);
 	unique_ptr<PaletteContainer>	out(new PaletteContainer(in.size / 768));
@@ -55,7 +55,7 @@ const BaseContainer *PlaypalArchiver::doExtract(const InputLumpData& in) const
 			c = Color(pixel[0], pixel[1], pixel[2]);
 		}
 	}
-	return out.release();
+    return std::move(out);
 }
 void PlaypalArchiver::doArchive(const BaseContainer& in, const Context& context, OutputLumpData& out) const
 {

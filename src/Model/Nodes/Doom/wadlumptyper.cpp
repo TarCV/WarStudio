@@ -66,7 +66,7 @@ bool wadlumptyper::checkMapSublumpNum(const wadlump &lump, int &i, bool textmap)
         };
         static const int szcheck = sizeof(check) / sizeof(check[0]);
         int j = 0;
-        for (j; j < szcheck; ++j) {
+        for (; j < szcheck; ++j) {
             if (name == check[j].lumpname)	break;
             if (j >= i && check[j].required)	warning("Lump \"" + check[j].lumpname + "\" is required but not present");
         }

@@ -28,8 +28,8 @@ namespace warstudio {
 
 class ColormapToImgConverter : public BaseConverter {
 protected:
-	const BaseContainer* doExtract(const BaseContainer& in) const override;
-	const BaseContainer* doArchive(const BaseContainer& in, const Context& context) const override;
+    std::unique_ptr<const BaseContainer> doExtract(const BaseContainer& in) const override;
+    std::unique_ptr<const BaseContainer> doArchive(const BaseContainer& in, const Context& context) const override;
 
 	ContainerType doGetArchiveContainerType() const override {return ContainerType(SPACE_WARSTUDIO, CONTAINER_TYPE::COLORMAP);};
 	ContainerType doGetFileContainerType() const override {return ContainerType(SPACE_WARSTUDIO, CONTAINER_TYPE::IMAGE);};

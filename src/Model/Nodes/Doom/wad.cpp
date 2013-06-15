@@ -119,11 +119,18 @@ void wad::loadPalette(const wadlump& lump, const BaseNode* becauseof)
 void wad::updatePaletteLump(std::string name, const Palette& pal, const BaseNode& becauseof)
 {
 	wadlump& lump = getLump("", name);
-	const PlaypalArchiver& archiver = dynamic_cast<const PlaypalArchiver &>(global.archivers.get(ArchiverId(SPACE_WARSTUDIO, BUILTIN_ARCHIVER::DOOM_PLAYPAL)));
-	InputLumpData in = {lump.ReadableData(), lump.size()};
-	unique_ptr<const PaletteContainer> data(dynamic_cast<const PaletteContainer*>(archiver.extract(in)));
-	PaletteContainer newdata(data->palset.size());
-	newdata.palset = data->palset;
+
+    const PlaypalArchiver& archiver = dynamic_cast<const PlaypalArchiver &>(global.archivers.get(ArchiverId(SPACE_WARSTUDIO, BUILTIN_ARCHIVER::DOOM_PLAYPAL)));
+
+    InputLumpData in = {lump.ReadableData(), lump.size()};
+
+    unique_ptr<const PaletteContainer> data;
+    unique_ptr_castmove(archiver.extract(in), data);
+    assert(data);
+
+    PaletteContainer newdata(data->palset.size());
+
+    newdata.palset = data->palset;
 	newdata.palset[0] = pal;
 	OutputLumpData out = {lump.WritableData(archiver.estimateSize(newdata))};
 	archiver.archive(newdata, Context(), out);
@@ -275,7 +282,14 @@ void wad::exportAll(string todir)
 		lumplist << it->getName();
 		if (it->type() != LUMP_TYPE::MARKER) {
 			const string file_name(dynamic_cast<ostringstream &>(ostringstream() << setfill('0') << setw(indexlen) << i << "_" << it->getName()).str());
-            const AdapterChain& chain = global.adapterchains.get(it->type());
+
+            //TODO:
+            const AdapterChain& chain =
+                    global.adapterchains.get(
+                        global.adapterchains.isKnown(it->type())
+                        ? it->type()
+                        : LUMP_TYPE::RAW);
+
             const string file_ext = chain.getExtension();
             const path	file_path = todirpath / path(file_name).replace_extension(file_ext);
 

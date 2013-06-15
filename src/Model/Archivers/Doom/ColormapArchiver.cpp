@@ -39,7 +39,7 @@ ColormapArchiver::ColormapArchiver(size_t colors_per_map, size_t colormaps_numbe
 {
 }
 
-const BaseContainer *ColormapArchiver::doExtract(const InputLumpData& in) const
+std::unique_ptr<const BaseContainer> ColormapArchiver::doExtract(const InputLumpData& in) const
 {
     if (in.size % colors_per_map_) warning("Incomplete map present or wrong number of colors per map line");
     const size_t map_number = in.size / colors_per_map_;
@@ -56,9 +56,9 @@ const BaseContainer *ColormapArchiver::doExtract(const InputLumpData& in) const
 			color_it = readFromStream<unsigned char>(in.stream);
 		}
 	}
-	return ret.release();
+    return std::move(ret);
 }
-void ColormapArchiver::doArchive(const BaseContainer& in, const Context& context, OutputLumpData& out) const
+void ColormapArchiver::doArchive(const BaseContainer& in, const Context&, OutputLumpData& out) const
 {
 
 	const ColormapContainer	&data = dynamic_cast<const ColormapContainer &>(in);

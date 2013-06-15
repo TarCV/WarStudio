@@ -52,7 +52,7 @@ Image::Image(size_t width, size_t height, Color bgcolor, const Palette* palette)
 	image_(Magick::Geometry(width, height),bgcolor.getNativeColor_()),
 	anchor_x_(0),
 	anchor_y_(0),
-	is_bgcolor_appended_(false)
+    is_bgcolor_appended_(false)
 {
     static_assert(Image::MARKER_WIDTH % 2 == 1, "MARKER_WIDTH must be odd");
 

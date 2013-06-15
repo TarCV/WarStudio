@@ -38,9 +38,10 @@ void ImageWriter::doWrite(const BaseContainer &in, OutputFileInfo out) const
 	const Image& image = dynamic_cast<const ImageContainer &>(in).image;
 	image.save(out.filepath);
 }
-const BaseContainer* ImageWriter::doRead(InputFileInfo infile, const Context& context) const
+std::unique_ptr<const BaseContainer> ImageWriter::doRead(InputFileInfo infile, const Context&) const
 {
-	return (new ImageContainer(infile.filepath));
+    unique_ptr<const ImageContainer> ret(new ImageContainer(infile.filepath));
+    return std::move(ret);
 }
 ContainerType ImageWriter::doGetContainerType() const
 {

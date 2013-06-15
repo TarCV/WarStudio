@@ -56,9 +56,9 @@ private:
 	std::streambuf*	source_;
 	std::streamoff	source_oldpos_;
 
-	int windowbegin_;
-	int windowend_;
-	int windowcursor_;	//streampos in the source_ (NOT suitable for stream.tellg)
+    size_t windowbegin_;
+    size_t windowend_;
+    size_t windowcursor_;	//streampos in the source_ (NOT suitable for stream.tellg)
 
 	int readpos_base_;	//(windowbegin_ + readpos_base_) is the position of currently buffered data in the source
 	std::size_t put_back_;

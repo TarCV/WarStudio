@@ -29,7 +29,7 @@ namespace warstudio {
 class DummyArchiver : public BaseArchiver
 {
 protected:
-	const BaseContainer *doExtract(const InputLumpData& in) const override;
+    std::unique_ptr<const BaseContainer> doExtract(const InputLumpData& in) const override;
 	void doArchive(const BaseContainer& in, const Context& context, OutputLumpData& out) const override;
 	int doEstimateSize(const BaseContainer& in) const override;
 	ContainerType doGetContainerType() const override;

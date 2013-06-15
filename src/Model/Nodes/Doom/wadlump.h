@@ -48,7 +48,7 @@ protected:
 	wadlump(wad& root, BaseNode* parent, std::string name, int offset = 0, int size = 0);
 public:
 	model::LUMP_TYPE type() const override;
-	int size() const override;
+    size_t size() const override;
 	void type(model::LUMP_TYPE newtype) {
 		//todo: fastsanecheck
 		type_ = newtype;

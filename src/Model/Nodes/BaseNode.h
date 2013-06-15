@@ -37,8 +37,8 @@ protected:
 	DirectoryNode* directory;		//TODO: used to represent the file (e.g. a wad file) this lump contained in (this may be the same or not as package field)
 public:
     BaseNode(std::string named, DirectoryNode* withindir, BaseNode* withparent) : parent_(withparent), name_(named), directory(withindir) {}
-	virtual LUMP_TYPE type() const = 0;
-	virtual int size() const = 0;
+    virtual LUMP_TYPE type() const = 0;
+    virtual size_t size() const = 0;
 
 	virtual std::istream& ReadableData() const = 0;
 	virtual std::ostream& WritableData(int maxsize) = 0;

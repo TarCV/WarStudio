@@ -31,15 +31,15 @@ namespace warstudio {
 struct Context;
 class BaseConverter {
 protected:
-	virtual const BaseContainer* doExtract(const BaseContainer& in) const = 0;
-	virtual const BaseContainer* doArchive(const BaseContainer& in, const Context& context) const = 0;
+    virtual std::unique_ptr<const BaseContainer> doExtract(const BaseContainer& in) const = 0;
+    virtual std::unique_ptr<const BaseContainer> doArchive(const BaseContainer& in, const Context& context) const = 0;
 
 	virtual ContainerType doGetArchiveContainerType() const = 0;
 	virtual ContainerType doGetFileContainerType() const = 0;
 	virtual void doCookContext(Context &) const {/* most adapters do not change context */}
 public:
-	const BaseContainer* extract(const BaseContainer& in) const;
-	const BaseContainer* archive(const BaseContainer& in, const Context& context) const;
+    std::unique_ptr<const BaseContainer> extract(const BaseContainer& in) const;
+    std::unique_ptr<const BaseContainer> archive(const BaseContainer& in, const Context& context) const;
 
 	ContainerType getArchiveContainerType() const {return doGetArchiveContainerType();}
 	ContainerType getFileContainerType() const {return doGetFileContainerType();}

@@ -33,7 +33,7 @@ using namespace std;
 namespace warstudio {
 	namespace model {
 
-const BaseContainer* PalToImgConverter::doExtract(const BaseContainer& in) const
+std::unique_ptr<const BaseContainer> PalToImgConverter::doExtract(const BaseContainer& in) const
 {
 	const PaletteSet& palset = dynamic_cast<const PaletteContainer &>(in).palset;
 	const size_t colors(palset.front().size());
@@ -55,9 +55,9 @@ const BaseContainer* PalToImgConverter::doExtract(const BaseContainer& in) const
         }
 	}
 	assert(it == window.pixels().end());
-    return ret.release();
+    return std::move(ret);
 }
-const BaseContainer* PalToImgConverter::doArchive(const BaseContainer& in, const Context& context) const
+std::unique_ptr<const BaseContainer> PalToImgConverter::doArchive(const BaseContainer& in, const Context&) const
 {
 	const Image& image = dynamic_cast<const ImageContainer &>(in).image;
 	Image::ConstWindow window(image.getConstWindow(Rect(0, 0, image.getWidth(), image.getHeight())));
@@ -78,7 +78,7 @@ const BaseContainer* PalToImgConverter::doArchive(const BaseContainer& in, const
         }
 	}
 	assert(it == window.pixels().end());
-    return ret.release();
+    return std::move(ret);
 }
 
 	}

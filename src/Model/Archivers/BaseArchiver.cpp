@@ -32,11 +32,11 @@ using namespace std;
 namespace warstudio {
 	namespace model {
 
-const BaseContainer *BaseArchiver::extract(const InputLumpData& in) const
+unique_ptr<const BaseContainer> BaseArchiver::extract(const InputLumpData& in) const
 {
-	auto ret = unique_ptr<const BaseContainer>(doExtract(in));
+    unique_ptr<const BaseContainer> ret(doExtract(in));
     assert(ret->getType() == getContainerType());
-	return ret.release();
+    return ret;
 }
 void BaseArchiver::archive(const BaseContainer& in, const Context& context, OutputLumpData& out) const
 {

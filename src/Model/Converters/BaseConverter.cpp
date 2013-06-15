@@ -32,19 +32,19 @@ using namespace std;
 namespace warstudio {
 	namespace model {
 
-const BaseContainer* BaseConverter::extract(const BaseContainer& in) const
+unique_ptr<const BaseContainer> BaseConverter::extract(const BaseContainer& in) const
 {
     assert(in.getType() == getArchiveContainerType());
-	auto ret = unique_ptr<const BaseContainer>(doExtract(in));
+    unique_ptr<const BaseContainer> ret(doExtract(in));
     assert(ret->getType() == getFileContainerType());
-	return ret.release();
+    return ret;
 }
-const BaseContainer* BaseConverter::archive(const BaseContainer& in, const Context& context) const
+unique_ptr<const BaseContainer> BaseConverter::archive(const BaseContainer& in, const Context& context) const
 {
     assert(in.getType() == getFileContainerType());
-	auto ret = unique_ptr<const BaseContainer>(doArchive(in, context));
+    unique_ptr<const BaseContainer> ret(doArchive(in, context));
     assert(ret->getType() == getArchiveContainerType());
-	return ret.release();
+    return ret;
 }
 
 	}

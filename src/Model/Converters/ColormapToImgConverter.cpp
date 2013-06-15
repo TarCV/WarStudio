@@ -31,7 +31,7 @@ using namespace std;
 namespace warstudio {
 	namespace model {
 
-const BaseContainer* ColormapToImgConverter::doExtract(const BaseContainer& in) const
+unique_ptr<const BaseContainer> ColormapToImgConverter::doExtract(const BaseContainer& in) const
 {
 	const ColormapContainer &container = dynamic_cast<const ColormapContainer &>(in);
 	const ColormapSet& mapset = container.mapset;
@@ -53,9 +53,9 @@ const BaseContainer* ColormapToImgConverter::doExtract(const BaseContainer& in) 
 			*it = *colormap_it;
 		}
 	}
-    return ret.release();
+    return std::move(ret);
 }
-const BaseContainer* ColormapToImgConverter::doArchive(const BaseContainer& in, const Context& context) const
+unique_ptr<const BaseContainer> ColormapToImgConverter::doArchive(const BaseContainer& in, const Context&) const
 {
 	const Image& image = dynamic_cast<const ImageContainer &>(in).image;
 
@@ -77,7 +77,7 @@ const BaseContainer* ColormapToImgConverter::doArchive(const BaseContainer& in, 
             *color = image.pixel(x, y).color();
         }
 	}*/
-    return ret.release();
+    return std::move(ret);
 }
 
 	}

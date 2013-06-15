@@ -37,11 +37,11 @@ void BaseWriter::write(const BaseContainer &in, OutputFileInfo outfile) const
     assert(in.getType() == getContainerType());
 	doWrite(in, outfile);
 }
-const BaseContainer* BaseWriter::read(InputFileInfo infile, const Context& context) const
+unique_ptr<const BaseContainer> BaseWriter::read(InputFileInfo infile, const Context& context) const
 {
 	auto ret = unique_ptr<const BaseContainer>(doRead(infile, context));
     assert(ret->getType() == getContainerType());
-	return ret.release();
+    return std::move(ret);
 }
 
 	}

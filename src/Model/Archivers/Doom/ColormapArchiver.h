@@ -32,7 +32,7 @@ class ColormapArchiver : public BaseArchiver
 public:
 	ColormapArchiver(size_t colors_per_map, size_t colormaps_number, std::string palette_name);
 protected:
-	const BaseContainer *doExtract(const InputLumpData& in) const override;
+    std::unique_ptr<const BaseContainer> doExtract(const InputLumpData& in) const override;
 	void doArchive(const BaseContainer& in, const Context& context, OutputLumpData& out) const override;
 	int doEstimateSize(const BaseContainer& in) const override;
 	PaletteDependencyList doGetPaletteDependencies() const override {return PaletteDependencyList(1, palette_name_); /* depends on assumption that PaletteDependencyList is a vector */}

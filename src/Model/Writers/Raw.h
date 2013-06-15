@@ -29,7 +29,7 @@ namespace warstudio {
 class RawWriter : public BaseWriter {
 protected:
 	void doWrite(const BaseContainer &in, OutputFileInfo outfile) const override;
-	const BaseContainer* doRead(InputFileInfo infile, const Context& context) const override;
+    std::unique_ptr<const BaseContainer> doRead(InputFileInfo infile, const Context& context) const override;
 
 	ContainerType doGetContainerType() const override;
 };

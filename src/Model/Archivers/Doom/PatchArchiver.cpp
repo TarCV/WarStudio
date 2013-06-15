@@ -35,7 +35,7 @@ namespace warstudio {
 	namespace model {
 		namespace doom {
 
-const BaseContainer *PatchArchiver::doExtract(const InputLumpData& in) const
+std::unique_ptr<const BaseContainer> PatchArchiver::doExtract(const InputLumpData& in) const
 {
 	const size_t width = readFromStream<uint16_t>(in.stream);
 	size_t height = readFromStream<uint16_t>(in.stream);
@@ -132,7 +132,7 @@ const BaseContainer *PatchArchiver::doExtract(const InputLumpData& in) const
 		assert(it == column_pointers.cend());
 	}
 
-	return ret.release();
+    return std::move(ret);
 }
 void PatchArchiver::doArchive(const BaseContainer& in, const Context& context, OutputLumpData& out) const
 {

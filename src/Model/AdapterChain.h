@@ -49,8 +49,8 @@ public:
 
 	void extract(const BaseNode&, std::string to_file) const;
 	void extract(const BaseContainer&, std::string to_file) const;
-	const BaseContainer* extract(const BaseNode&) const;
-	const BaseContainer* extract(const BaseContainer&) const;
+    std::unique_ptr<const BaseContainer> extract(const BaseNode&) const;
+    std::unique_ptr<const BaseContainer> extract(const BaseContainer&) const;
 
     std::string getExtension() const;
 
@@ -65,9 +65,9 @@ public:
 	friend std::ostream& operator << (std::ostream&, const AdapterChain&);
 	friend std::istream& operator >> (std::istream&, AdapterChain&);
 private:
-	const BaseContainer* doExtractFromNode(const BaseNode& from_node) const;
-	const BaseContainer* doExtract(const BaseContainer&) const;
-    void doExtractToFile(const BaseContainer&, std::string to_file) const;
+    std::unique_ptr<const BaseContainer> doArchiverExtract(const BaseNode& from_node) const;
+    std::unique_ptr<const BaseContainer> doConverterExtract(const BaseContainer& from_data) const;
+    void doWriterExtract(const BaseContainer& from_data, std::string to_file) const;
 
     static const ConverterList translateConverterids(const ConverteridList&&);
 

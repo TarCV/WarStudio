@@ -24,6 +24,7 @@
 #include <string>
 #include <iostream>
 #include <assert.h>
+#include <memory>
 
 namespace warstudio {
 
@@ -65,6 +66,27 @@ template <class T>
 {
 	//todo: implement appropiate static assertion
 	out.write(reinterpret_cast<const char *>(&data), sizeof(data));
+}
+
+template <typename T_SRC, typename T_DEST>
+    void unique_ptr_castmove(std::unique_ptr<T_SRC> && src,
+                             std::unique_ptr<T_DEST> & dest
+                            )
+{
+    if (!src) {
+        dest.reset();
+        return;
+    }
+
+    T_DEST * dest_ptr = dynamic_cast<T_DEST *>(src.get());
+
+    if (!dest_ptr)
+    {
+        throw std::bad_cast();
+    }
+
+    src.release();
+    dest.reset(dest_ptr);
 }
 
 /*

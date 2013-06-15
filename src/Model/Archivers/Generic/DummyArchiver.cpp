@@ -35,11 +35,11 @@ using namespace std;
 namespace warstudio {
 	namespace model {
 
-const BaseContainer *DummyArchiver::doExtract(const InputLumpData& in) const
+std::unique_ptr<const BaseContainer> DummyArchiver::doExtract(const InputLumpData& in) const
 {
-	return (new StreamBufferContainer(&in.stream, false, in.size));
+    return unique_ptr<const StreamBufferContainer>(new StreamBufferContainer(&in.stream, false, in.size));
 }
-void DummyArchiver::doArchive(const BaseContainer& in, const Context& context, OutputLumpData& out) const
+void DummyArchiver::doArchive(const BaseContainer& in, const Context&, OutputLumpData& out) const
 {
 	const StreamBufferContainer& inbuf = dynamic_cast<const StreamBufferContainer&>(in);
 	StreamCopy(inbuf.buffer.ReadableData(), out.stream);
